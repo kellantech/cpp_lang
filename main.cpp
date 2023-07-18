@@ -77,7 +77,7 @@ int ival;
   virtual lType* lt(lType* r) {
     error("lt not implemented");
   }
-  virtual lType* truthy() {
+  virtual bool truthy() {
     error("truthy not implemented");
   }
 };
@@ -119,8 +119,8 @@ void print() override{
   lType* lt(lType* r) override{
     return new numberType((int)(ival < r->iget()));
   }
-  lType* truthy() override{
-    return new numberType(ival != 0);
+  bool truthy() override{
+    return (ival != 0);
   }
   
 };
@@ -129,7 +129,7 @@ class None : public lType{
   void print() override{
     cout<<"null";  
   }
-  lType* lt(lType* r) override{
+  bool truthy() override{
     return new numberType(0);
   }
 };
@@ -173,6 +173,7 @@ class intNode : public astNode{
     cout << val << " ";
   }
   lType* exec(symbolTable st) override{
+    cout << "IT" << val <<endl;
     return new numberType(val);
   }
   
@@ -222,8 +223,7 @@ binopNode(astNode* lh,astNode* rh,int o){l = move(lh);r=move(rh);op=o;}
     }
     else if ( op == tt("AND")){
       bool lt = lh->truthy();
-      bool rt = lh->truthy();
-      cout << lt << ' ' << rt << "@!#" << endl;
+      bool rt = rh->truthy();
       return new numberType(lt && rt);
     }
     else if ( op == tt("OR")){
