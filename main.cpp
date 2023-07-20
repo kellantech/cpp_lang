@@ -322,23 +322,41 @@ public:
   astNode* cnd;
   astNode* ebk;
   bool els;
+  bool el = false;
+  vector<astNode*> elb;
+  vector<astNode*> elc;
+  
   ifNode(astNode* c, astNode* b){
     blk = move(b);
     cnd = move(c);
     ebk = nullptr;
     els = false;
   }
-  ifNode(astNode* c, astNode* b,astNode* e){
-    blk = move(b);
-    cnd = move(c);
-    ebk = move(e);
+  void addElse(astNode* eb){
+    ebk = move(eb);
     els = true;
+  }
+  void addElif(vector<astNode*> eb,
+        vector<astNode*> ec){
+    elb = eb;
+    elc = ec;
+    el = true;
   }
   void print() override{
     cout << "IF (";
     cnd->print();
     cout << ") ";
     blk->print();
+    int i = 0;
+    if (el){
+      for( astNode* c:elc){
+        c->print();
+        cout <<" ";
+        elb[i]->print();
+        i++;
+
+      }
+    }
     if (els){
       cout << "ELSE";
       ebk->print();
@@ -347,12 +365,43 @@ public:
   lType* exec(symbolTable st) override{
     if (cnd->exec(st)->truthy()){
       blk->exec(st);
+      return new None;
     }
-    else if (els){
+    if (el){
+     for (int i=0;i<elc.size();i++){
+       if (elc[i]->exec(st)->truthy()){
+         elb[i]->exec(st);
+         return new None;
+        }
+      } 
+    }
+    if (els){
       ebk->exec(st);
+      return new None;
     }
     return new None;
   }
+};
+
+class whileNode: public astNode{
+  astNode* bk;
+  astNode* cnd;
+  whileNode(astNode* b, astNode* c){
+    bk = move(b);
+    cnd = move(c);
+  }
+  void print() override{
+    cout << "WHILE ";
+    cnd->print();
+    cout << " " ;
+    bk->print();
+  }
+  lType* exec(symbolTable st) override{
+    while (cnd->exec(st)->truthy()){
+      bk->exec(st);
+    }
+  }
+
 };
 
 class token{
@@ -395,7 +444,7 @@ public:
   string txt;
   int ind = -1;
   char cur = (char)2;
-  vector<string> KWDS {"var","if","else"};
+  vector<string> KWDS {"var","if","else","elif"};
   lexer(string t){
     txt = t;
     next();
@@ -596,14 +645,28 @@ public:
       cur.print();
       cout << "!&^"<<endl;
       astNode* bl = block();
+      vector<astNode*> ecv;
+      vector<astNode*> ebv;
+      while (cur.type == tt("KWD") && cur.val == "elif"){
+        next();
+        astNode* e = logical_expr();
+        ecv.push_back(e);
+        astNode* b = block();
+        ebv.push_back(b);
+      }
       if (cur.type == tt("KWD") && cur.val == "else"){
         next();
         astNode* eb = block();
         cout<<"ELS"<<endl;
-        return new ifNode(move(cnd),move(bl),move(eb));
+        ifNode* n =  new ifNode(move(cnd),move(bl));
+        n->addElse(move(eb));
+        n->addElif(ebv,ecv);
+        return move(n);
       }
       else{
-        return new ifNode(move(cnd),move(bl));
+        ifNode* n = new ifNode(move(cnd),move(bl));
+        n->addElif(ebv,ecv);
+        return move(n);
       }
     }
     int op[] = {tt("AND"),tt("OR")};
