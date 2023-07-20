@@ -316,29 +316,42 @@ string nm;
   }
 };
 
-class logicalNode : public astNode{
-  astNode* lh;
-  astNode* rh;
-  int op;
-  logicalNode(astNode* l,astNode* r,int o){
-    lh = move(l);
-    rh = move(r);
-    o = op;
+class ifNode: public astNode{
+public:
+  astNode* blk;
+  astNode* cnd;
+  astNode* ebk;
+  bool els;
+  ifNode(astNode* c, astNode* b){
+    blk = move(b);
+    cnd = move(c);
+    ebk = nullptr;
+    els = false;
+  }
+  ifNode(astNode* c, astNode* b,astNode* e){
+    blk = move(b);
+    cnd = move(c);
+    ebk = move(e);
+    els = true;
+  }
+  void print() override{
+    cout << "IF (";
+    cnd->print();
+    cout << ") ";
+    blk->print();
+    if (els){
+      cout << "ELSE";
+      ebk->print();
+    }
   }
   lType* exec(symbolTable st) override{
-    lType* lhs = lh->exec(st);
-    lType* rhs = lh->exec(st);
-    bool lt = lhs->truthy();
-    bool rt = rhs->truthy();
-    if ( op == tt("AND")){
-      return new numberType(lt && rt);
+    if (cnd->exec(st)->truthy()){
+      blk->exec(st);
     }
-    else if ( op == tt("OR")){
-      return new numberType(lt || rt);
+    else if (els){
+      ebk->exec(st);
     }
-    else {
-      error("bad logical op");
-    }
+    return new None;
   }
 };
 
@@ -382,7 +395,7 @@ public:
   string txt;
   int ind = -1;
   char cur = (char)2;
-
+  vector<string> KWDS {"var","if","else"};
   lexer(string t){
     txt = t;
     next();
@@ -464,7 +477,6 @@ public:
         else{
           tks.push_back(token(tt("EQL")));
         }
-        next();
       }
       
       else if (cur == ' ' || cur == '\n') { 
@@ -479,7 +491,7 @@ public:
           r += string{cur};
           next();
         }
-        if ( r == "var" ) {
+        if ( findvec<string>(KWDS,r)) {
           tks.push_back(token(tt("KWD"),r));
         }
         else {
@@ -542,7 +554,7 @@ public:
     }
     else if (cur.type == tt("LP")){
       next();
-      astNode* p = expr();
+      astNode* p = logical_expr();
       next();
       return p;
       
@@ -557,6 +569,10 @@ public:
     return binOp(op, "value",2);
   }
   astNode* cmp(){
+    int op[] = {tt("EQ"),tt("NE"),tt("LT"),tt("GT")};
+    return binOp(op,"expr",4);
+  }
+  astNode* logical_expr(){
     if (cur.type == tt("KWD") && cur.val == "var"){
       next();
       string nm;
@@ -571,13 +587,25 @@ public:
         error("expected '='");
       }
       next();
-      astNode* a = cmp();
+      astNode* a = logical_expr();
       return new varSetNode(nm,a);
     }
-    int op[] = {tt("EQ"),tt("NE"),tt("LT"),tt("GT")};
-    return binOp(op,"expr",4);
-  }
-  astNode* logical_expr(){
+    if (cur.type == tt("KWD") && cur.val == "if"){
+      next();
+      astNode* cnd = logical_expr();
+      cur.print();
+      cout << "!&^"<<endl;
+      astNode* bl = block();
+      if (cur.type == tt("KWD") && cur.val == "else"){
+        next();
+        astNode* eb = block();
+        cout<<"ELS"<<endl;
+        return new ifNode(move(cnd),move(bl),move(eb));
+      }
+      else{
+        return new ifNode(move(cnd),move(bl));
+      }
+    }
     int op[] = {tt("AND"),tt("OR")};
     return binOp(op,"cmp",2);
   }
@@ -591,12 +619,13 @@ public:
     else{
       next();
         while (1){
-        astNode* cn = cmp();
+        astNode* cn = logical_expr();
         op.push_back(move(cn));
         cout<<cur.type<<endl;
-        if (cur.type == tt("RCB")){ cout<<"!!!!!"<<endl;break;};
+        if (cur.type == tt("RCB")){ break;};
       }
     }
+    next();
     return new blockNode(op);
   }
   astNode* binOp(int tks[],string fn,int sz){
