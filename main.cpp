@@ -8,7 +8,7 @@ using namespace std;
 template <typename T>
 bool findvec(vector<T> vec, T e) {
   for (T el : vec){
-    if ( e == el){return true;}
+    if ( e == el){  return true; }
   }
   return false;
 }
@@ -36,7 +36,7 @@ int tt(string s){
     {"EQL",10},{"EQ",11},{"LCB",12},
     {"RCB",13},{"NE",14},{"GT",15},
     {"LT",16},{"AND",17},{"OR",18},
-      
+    {"CMA",19},
   
     {"NONE",100},{"NUL",101}
   };
@@ -44,13 +44,47 @@ int tt(string s){
   return tt_map[s];
 }
 
+class lType;
+class astNode;
+class symbolTable;
 
+
+
+class symbolTable{
+  public:
+  map<string,lType*>& tbl;
+  symbolTable* parent;
+  bool p = false;
+  symbolTable(map<string,lType*>& t):tbl(t){
+    
+  }
+  void setParent(symbolTable* par){
+    parent = move(par);
+    p = true;
+  }
+  lType* get(string nm){
+    if(tbl.find(nm) == tbl.end()){
+      if (p){ 
+        return parent->get(nm);
+      }
+      else{
+        error("name not found");
+        return nullptr;
+      }
+    }
+    else {
+      return move(tbl[nm]);
+    }
+  }
+  void set(string n,lType* v){
+    tbl[n] = move(v);
+  }
+};
 
 
 class lType{
-  
   public:
-int ival;
+  int ival;
   virtual int iget(){error("virtual");}
   virtual void print(){cout << ":[";};
   virtual lType* add(lType* r) {
@@ -80,7 +114,22 @@ int ival;
   virtual bool truthy() {
     error("truthy not implemented");
   }
+  virtual lType* call(vector<lType*> v,symbolTable st) {
+    error("not callable");
+  }
 };
+
+class astNode{
+  public:
+  virtual lType* exec( symbolTable st ){
+    cout<<":("<<endl;
+    error("...");
+  }
+  virtual void print(){
+    cout << ":(p"<<endl;
+  }
+};
+
 
 class numberType: public lType{
   public:
@@ -134,36 +183,41 @@ class None : public lType{
   }
 };
 
-class symbolTable{
+class fnType : public lType{
   public:
-  map<string,lType*>& tbl;
-  symbolTable(map<string,lType*>& t):tbl(t){
-
+  astNode* blk;
+  vector<string> argn;
+  string nm;
+  fnType(astNode* bk,vector<string> ar,string n){
+    blk = bk;
+    argn = ar;
+    nm = n;
   }
-  lType* get(string nm){
-    if(tbl.find(nm) == tbl.end()){
-      error("name not found");
-      return nullptr;
+  void print() override{
+    cout << "FnType " << nm << "( ";
+    for (string n: argn){
+      cout << n << " ";
     }
-    else {
-      return move(tbl[nm]);
-    }
+    cout << ") ";
+    blk->print();
   }
-  void set(string n,lType* v){
-    tbl[n] = move(v);
+  lType* call(vector<lType*> v,symbolTable st) override{
+    map<string,lType*>mp;
+    symbolTable nst(mp);
+    nst.setParent(&st);
+    for(int i = 0; i < v.size(); i++){
+      string n = argn[i];
+      lType* nd = move(v[i]);
+      nst.set(n,move(nd));
+    }
+    lType* rs = blk->exec(nst);
+    for (auto& [key,val]:mp){
+      delete val;
+    }
+    return rs;
   }
 };
 
-class astNode{
-  public:
-  virtual lType* exec( symbolTable st ){
-    cout<<":("<<endl;
-    error("...");
-  }
-  virtual void print(){
-    cout << ":(p"<<endl;
-  }
-};
 
 class intNode : public astNode{
   public:
@@ -384,6 +438,7 @@ public:
 };
 
 class whileNode: public astNode{
+  public:
   astNode* bk;
   astNode* cnd;
   whileNode(astNode* b, astNode* c){
@@ -395,13 +450,108 @@ class whileNode: public astNode{
     cnd->print();
     cout << " " ;
     bk->print();
+    cout<<endl;
+    string _;
+   // cin>>_;
   }
   lType* exec(symbolTable st) override{
-    while (cnd->exec(st)->truthy()){
+    cout << "W!"<<endl;
+    string _;
+    while (1){
+      lType* c = cnd->exec(st);
+      c->print();
+      cout<<"%%^"<<endl;
+      if (!c->truthy()) { break;}
       bk->exec(st);
+      //cin>>_;
     }
+    return new None;
   }
 
+};
+
+class forNode : public astNode{
+  public:
+  astNode* init;
+  astNode* cnd;
+  astNode* inc;
+  astNode* blk;
+  forNode(astNode* i,astNode* cn, astNode* ic,astNode* bk){
+    init = move(i);
+    cnd = move(cn);
+    inc = move(ic);
+    blk = move(bk);
+  }
+  void print() override{
+    cout << "FOR( ";
+    init->print();
+    cout << ", ";
+    cnd->print();
+    cout << ", ";
+    blk->print();
+    cout << " )";
+  }
+  lType* exec(symbolTable st) override{
+    init->exec(st);
+    while (true){
+      lType* c = cnd->exec(st);
+      if (!c->truthy()) { break; }
+      blk->exec(st);
+      inc->exec(st);
+    }
+    return new None;
+  }
+};
+
+class fnDefNode : public astNode{
+  public:
+  astNode* blk;
+  string nm;
+  vector<string> args;
+  fnDefNode(string n, vector<string> a,astNode* bk){
+    blk = move(bk);
+    nm = n;
+    args = a;
+  }
+  void print() override{
+    cout << "FNDEF "<<nm << "( ";
+    for(string arg:args){
+      cout << arg << " ";
+    }
+    cout << " )";
+    cout << " -> ";
+    blk->print();
+  }
+  lType* exec(symbolTable st) override{
+    lType* fn = new fnType(move(blk),args,nm);
+    st.set(nm,fn);
+    return new None;
+  }
+};
+
+class fnCallNode : public astNode{
+  string nm;
+  vector<astNode*> args;
+  fnCallNode(string n,vector<astNode*> arg){
+    args = arg;
+    nm = n;
+  }
+  void print() override{
+    cout << "FNCALL "<< nm << " (";
+    for(astNode* a:args){
+      a->print();
+      cout<<", ";
+    }
+    cout << ")";
+  }
+  lType* exec(symbolTable st) override{
+    lType* fn = st.get(nm);
+    vector<lType*>xrg;
+    for (auto* arg:args){
+      xrg.push_back(arg->exec(st));
+    }
+    fn->call(xrg,st);
+  }
 };
 
 class token{
@@ -444,7 +594,7 @@ public:
   string txt;
   int ind = -1;
   char cur = (char)2;
-  vector<string> KWDS {"var","if","else","elif"};
+  vector<string> KWDS {"var","if","else","elif","while","for","fn"};
   lexer(string t){
     txt = t;
     next();
@@ -514,6 +664,10 @@ public:
       }
       else if (cur == '|'){
         tks.push_back(token(tt("OR")));
+        next();
+      }
+      else if (cur == ','){
+        tks.push_back(token(tt("CMA")));
         next();
       }
       else if (cur == '='){
@@ -665,8 +819,70 @@ public:
       }
       else{
         ifNode* n = new ifNode(move(cnd),move(bl));
-        n->addElif(ebv,ecv);
+        n->addElif(ebv,ecv); 
         return move(n);
+      }
+    }
+    else if ( cur.type == tt("KWD") && cur.val == "while"){
+      next();
+      astNode* c = logical_expr();
+      astNode* b = block();
+      return new whileNode(b,c);
+    }
+    else if ( cur.type == tt("KWD") && cur.val == "for" ){
+      next();
+      astNode* i;
+      astNode* c;
+      astNode* ic;
+      astNode* b;
+      if (cur.type == tt("LP")){
+        next();
+        i = logical_expr();
+        if (cur.type == tt("CMA")){
+          next();
+          c = logical_expr();
+          if (cur.type == tt("CMA")){
+            next();
+            ic = logical_expr();
+            if (cur.type == tt("RP")){
+              next();
+              b = block();
+              return new forNode(i,c,ic,b);
+            }
+            else{
+                error("expected ')'");
+            }
+          }
+          else {
+           error("expected ','");
+          }    
+        }
+        else {
+          error("expected ','");
+        }
+      }
+      else{
+        error ("expected '('");
+      }
+    }
+    else if (cur.type == tt("KWD") && cur.val == "fn"){
+      next();
+      string nm = cur.val;
+      next();
+      vector<string> arg;
+      if (cur.type == tt("LP")){
+        next();
+        while (cur.type != tt("RP")){
+          arg.push_back(cur.val);
+          next();
+          if (cur.type == tt("CMA")) { next(); }
+        }
+        next();
+        astNode* blk = block();
+        return new fnDefNode(nm,arg,blk);
+      }
+      else {
+        error("expected '('");
       }
     }
     int op[] = {tt("AND"),tt("OR")};
