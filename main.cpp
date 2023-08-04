@@ -2,47 +2,13 @@
 #include <map>
 #include <vector>
 
+
+#include "utils.hpp"
+#include "ltype.hpp"
+
 using namespace std;
 
 
-template <typename T>
-bool findvec(vector<T> vec, T e) {
-  for (T el : vec){
-    if ( e == el){  return true; }
-  }
-  return false;
-}
-
-
-template <typename T>
-bool findary(T ary [], T e, int s) {
-  for (int i =0;i<s;i++){
-    if ( e == ary[i]){return true;}
-  }
-  return false;
-
-}
-
-void error(string msg){
-  cout << "error: " << msg << endl;
-  exit(1);
-}
-int tt(string s){
-  
-  map<string,int> tt_map {
-    {"ADD",1},{"SUB",2},{"MUL",3},
-    {"DIV",4},{"INT",5},{"LP",6},
-    {"RP",7 },{"KWD",8},{"ID",9},
-    {"EQL",10},{"EQ",11},{"LCB",12},
-    {"RCB",13},{"NE",14},{"GT",15},
-    {"LT",16},{"AND",17},{"OR",18},
-    {"CMA",19},
-  
-    {"NONE",100},{"NUL",101}
-  };
-  
-  return tt_map[s];
-}
 
 class lType;
 class astNode;
@@ -82,45 +48,12 @@ class symbolTable{
 };
 
 
-class lType{
-  public:
-  int ival;
-  virtual int iget(){error("virtual");}
-  virtual void print(){cout << ":[";};
-  virtual lType* add(lType* r) {
-    error("add not implemented");
-  }
-   virtual lType* sub(lType* r) {
-    error("sub not implemented");
-  }
-  virtual lType* mul(lType* r) {
-    error("mul not implemented");
-  }
-  virtual lType* div(lType* r) {
-    error("div not implemented");
-  }
-  virtual lType* eql(lType* r) {
-    error("eql not implemented");
-  }
-  virtual lType* neq(lType* r) {
-    error("neq not implemented");
-  }
-  virtual lType* gt(lType* r) {
-    error("gt not implemented");
-  }
-  virtual lType* lt(lType* r) {
-    error("lt not implemented");
-  }
-  virtual bool truthy() {
-    error("truthy not implemented");
-  }
-  virtual lType* call(vector<lType*> v,symbolTable st) {
-    error("not callable");
-  }
-};
 
 class astNode{
   public:
+  virtual bool isRet(){
+    return false;
+  }
   virtual lType* exec( symbolTable st ){
     cout<<":("<<endl;
     error("...");
@@ -210,7 +143,11 @@ class fnType : public lType{
       lType* nd = move(v[i]);
       nst.set(n,move(nd));
     }
+    
     lType* rs = blk->exec(nst);
+    cout << "**";
+    rs->print();
+    cout<<endl;
     for (auto& [key,val]:mp){
       delete val;
     }
@@ -227,7 +164,6 @@ class intNode : public astNode{
     cout << val << " ";
   }
   lType* exec(symbolTable st) override{
-    cout << "IT" << val <<endl;
     return new numberType(val);
   }
   
@@ -292,14 +228,24 @@ binopNode(astNode* lh,astNode* rh,int o){l = move(lh);r=move(rh);op=o;}
 class blockNode : public astNode{
 public:
   vector<astNode*> ops;
-  blockNode( vector<astNode*> op){
+  bool fn;
+  blockNode( vector<astNode*> op,bool f=false){
+    fn = f;
     for(astNode* el:op){
       ops.push_back(move(el));
     }
   }
-  lType * exec(symbolTable st) override{
+  lType* exec(symbolTable st) override{
     for(astNode* op : ops){
-      op->exec(st);
+      if (op->isRet()){
+        if (fn){ return op->exec(st); }
+        else { 
+          error("can only return from functions"); 
+        }
+      }
+      else{
+        op->exec(st);
+      }
     }
     return new None();
   }
@@ -455,12 +401,10 @@ class whileNode: public astNode{
    // cin>>_;
   }
   lType* exec(symbolTable st) override{
-    cout << "W!"<<endl;
     string _;
     while (1){
       lType* c = cnd->exec(st);
       c->print();
-      cout<<"%%^"<<endl;
       if (!c->truthy()) { break;}
       bk->exec(st);
       //cin>>_;
@@ -508,10 +452,14 @@ class fnDefNode : public astNode{
   astNode* blk;
   string nm;
   vector<string> args;
+  astNode* ret;
   fnDefNode(string n, vector<string> a,astNode* bk){
     blk = move(bk);
     nm = n;
     args = a;
+  }
+  void addRet(astNode* r){
+    ret = move(r);
   }
   void print() override{
     cout << "FNDEF "<<nm << "( ";
@@ -530,6 +478,7 @@ class fnDefNode : public astNode{
 };
 
 class fnCallNode : public astNode{
+  public:
   string nm;
   vector<astNode*> args;
   fnCallNode(string n,vector<astNode*> arg){
@@ -550,7 +499,44 @@ class fnCallNode : public astNode{
     for (auto* arg:args){
       xrg.push_back(arg->exec(st));
     }
-    fn->call(xrg,st);
+    return fn->call(xrg,st);
+    
+  }
+};
+
+class retNode : public astNode{
+  public:
+  astNode* nd;
+  retNode(astNode* n){
+    nd = move(n);
+  }
+  void print() override{
+    cout << "RETURN ";
+    nd->print();
+  }
+  lType* exec(symbolTable st) override{
+    lType* r=  nd->exec(st);
+    return r;
+  }
+  bool isRet() override{
+    return true;
+  }
+};
+
+class propGetNode : public astNode{
+  public:
+  string prop;
+  astNode* nd;
+  propGetNode(astNode* n, string p){
+    prop = p;
+    nd = move(n);
+  }
+  void print() override{
+    nd->print();
+    cout<<" . " << prop;
+  }
+  lType* exec(symbolTable st) override{
+    return nd->exec(st)->getProp(prop);
   }
 };
 
@@ -594,7 +580,7 @@ public:
   string txt;
   int ind = -1;
   char cur = (char)2;
-  vector<string> KWDS {"var","if","else","elif","while","for","fn"};
+  vector<string> KWDS {"var","if","else","elif","while","for","fn","ret"};
   lexer(string t){
     txt = t;
     next();
@@ -670,6 +656,10 @@ public:
         tks.push_back(token(tt("CMA")));
         next();
       }
+      else if (cur == '.'){
+        tks.push_back(token(tt("DOT")));
+        next();
+      }
       else if (cur == '='){
         next();
         if(cur == '='){
@@ -739,33 +729,51 @@ public:
   }
   
   astNode* value(){
+    astNode* ret;
+    
     if (cur.type == tt("INT")){
       string tmp = cur.val;
       next();
-      return new intNode(stoi(tmp));
+      ret = new intNode(stoi(tmp));
     }
       
     else if (cur.type == tt("SUB")){
       next();
       astNode* r = value();
-      return new unOpNode(tt("SUB"),move(r));  
+      ret = new unOpNode(tt("SUB"),move(r));  
     }
     else if (cur.type == tt("ID")){
       string n = cur.val;
       next();
-      return new varGetNode(n);
+      if (cur.type == tt("LP")){
+        next();
+        vector<astNode*> arg;
+        while (cur.type != tt("RP")){
+          arg.push_back(logical_expr());
+          if (cur.type == tt("CMA")){ next(); }
+        }
+        ret = new fnCallNode(n,arg);
+      }
+      else { ret = new varGetNode(n); }
     }
     else if (cur.type == tt("LP")){
       next();
-      astNode* p = logical_expr();
+      ret = logical_expr();
       next();
-      return p;
-      
     }
     else{
       error("expcted int");
       return nullptr;
     }
+    if (cur.type == tt("DOT")){
+      next();
+      if (cur.type == tt("ID")){
+        string p = cur.val;
+        next();
+        return new propGetNode(move(ret),p);
+      }
+    }
+    return move(ret);
   }
   astNode* term (){
     int op[] = {tt("MUL"),tt("DIV")};
@@ -811,7 +819,6 @@ public:
       if (cur.type == tt("KWD") && cur.val == "else"){
         next();
         astNode* eb = block();
-        cout<<"ELS"<<endl;
         ifNode* n =  new ifNode(move(cnd),move(bl));
         n->addElse(move(eb));
         n->addElif(ebv,ecv);
@@ -878,7 +885,7 @@ public:
           if (cur.type == tt("CMA")) { next(); }
         }
         next();
-        astNode* blk = block();
+        astNode* blk = block(true);
         return new fnDefNode(nm,arg,blk);
       }
       else {
@@ -892,25 +899,30 @@ public:
     int op[] = {tt("ADD"),tt("SUB")};
     return binOp(op,"term",2);
   }
-  astNode* block(){
+  astNode* block(bool isFn=false){
     vector<astNode*> op;
     if (cur.type != tt("LCB")){ error("expected '{'"); }
     else{
       next();
-        while (1){
-        astNode* cn = logical_expr();
-        op.push_back(move(cn));
-        cout<<cur.type<<endl;
+      while (1){
+        if (cur.type == tt("KWD") && cur.val == "ret"){
+          next();
+          astNode* nd = logical_expr();
+          op.push_back(new retNode(move(nd)));
+        }
+        else{
+          astNode* cn = logical_expr();
+          op.push_back(move(cn));
+        }
         if (cur.type == tt("RCB")){ break;};
       }
     }
     next();
-    return new blockNode(op);
+    return new blockNode(op,isFn);
   }
   astNode* binOp(int tks[],string fn,int sz){
     
     astNode* node;
-    cout<<fn<< " { " << endl;
     if (fn == "value"){ node = value(); }
     else if (fn == "term") { node = term(); }
     else if (fn == "expr") { node = expr(); }
@@ -928,7 +940,6 @@ public:
       else if (fn == "cmp") { r = cmp(); }
       node = new binopNode(node,r,ot.type);
     }
-    cout << "}"<<endl;
     return node;
   }
 };
