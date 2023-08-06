@@ -29,6 +29,9 @@ void error(string msg){
   cout << "error: " << msg << endl;
   exit(1);
 }
+void notImpl(string i){
+  error(i+" not implemented");
+}
 int tt(string s){
   
   map<string,int> tt_map {
