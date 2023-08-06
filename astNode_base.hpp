@@ -1,4 +1,5 @@
-
+#ifndef _AST_H
+#define _AST_H
 class astNode{
   public:
   virtual bool isRet(){
@@ -12,3 +13,4 @@ class astNode{
     cout << ":(p"<<endl;
   }
 };
+#endif
