@@ -1,3 +1,6 @@
+#ifndef _ST_H
+#define _ST_H
+
 class symbolTable{
   public:
   map<string,lType*>& tbl;
@@ -28,3 +31,5 @@ class symbolTable{
     tbl[n] = move(v);
   }
 };
+
+#endif
