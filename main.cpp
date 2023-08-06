@@ -2,183 +2,117 @@
 #include <map>
 #include <vector>
 
-
-#include <iostream>
-#include <map>
-#include <vector>
 using namespace std;
 
-using namespace std;
-
-
-template <typename T>
-bool findvec(vector<T> vec, T e) {
-  for (T el : vec){
-    if ( e == el){  return true; }
-  }
-  return false;
-}
-
-
-template <typename T>
-bool findary(T ary [], T e, int s) {
-  for (int i =0;i<s;i++){
-    if ( e == ary[i]){return true;}
-  }
-  return false;
-
-}
-
-void error(string msg){
-  cout << "error: " << msg << endl;
-  exit(1);
-}
-int tt(string s){
-  
-  map<string,int> tt_map {
-    {"ADD",1},{"SUB",2},{"MUL",3},
-    {"DIV",4},{"INT",5},{"LP",6},
-    {"RP",7 },{"KWD",8},{"ID",9},
-    {"EQL",10},{"EQ",11},{"LCB",12},
-    {"RCB",13},{"NE",14},{"GT",15},
-    {"LT",16},{"AND",17},{"OR",18},
-    {"CMA",19},{"DOT",20},
-  
-    {"NONE",100},{"NUL",101}
-  };
-  
-  return tt_map[s];
-}
+#include "utils.hpp"
 
 class lType;
 class astNode;
 class symbolTable;
 
+#include "symbolTable.hpp"
+#include "lType_base.hpp"
+#include "astNode_base.hpp"
 
-class symbolTable{
+void notImpl(string);
+
+class stringType : public lType{
   public:
-  map<string,lType*>& tbl;
-  symbolTable* parent;
-  bool p = false;
-  symbolTable(map<string,lType*>& t):tbl(t){
-    
+  stringType(string v){ sval = v; typ = "STR"; }
+  string sget() override {return sval;} 
+  void print() override{
+    cout << '"' << sval << '"';
   }
-  void setParent(symbolTable* par){
-    parent = move(par);
-    p = true;
-  }
-  lType* get(string nm){
-    if(tbl.find(nm) == tbl.end()){
-      if (p){ 
-        return parent->get(nm);
-      }
-      else{
-        error("name not found");
-        return nullptr;
-      }
+  lType* add(lType *r) override{
+    if (r->typ == "STR"){
+      return new stringType(sval + r->sget());
     }
     else {
-      return move(tbl[nm]);
+      notImpl("add");
     }
   }
-  void set(string n,lType* v){
-    tbl[n] = move(v);
+  bool truthy() override{
+    return sval.length() > 0;
   }
 };
-
-
-class lType{
-  public:
-  int ival;
-  virtual int iget(){error("virtual");}
-  virtual void print(){cout << ":[";};
-  virtual lType* add(lType* r) {
-    error("add not implemented");
-  }
-   virtual lType* sub(lType* r) {
-    error("sub not implemented");
-  }
-  virtual lType* mul(lType* r) {
-    error("mul not implemented");
-  }
-  virtual lType* div(lType* r) {
-    error("div not implemented");
-  }
-  virtual lType* eql(lType* r) {
-    error("eql not implemented");
-  }
-  virtual lType* neq(lType* r) {
-    error("neq not implemented");
-  }
-  virtual lType* gt(lType* r) {
-    error("gt not implemented");
-  }
-  virtual lType* lt(lType* r) {
-    error("lt not implemented");
-  }
-  virtual bool truthy() {
-    error("truthy not implemented");
-  }
-  virtual lType* call(vector<lType*> v,symbolTable st) {
-    error("not callable");
-  }
-  virtual lType* getProp(string p) {
-    error("no proptery '"+p+"'" );
-  }
-
-};
-
-class astNode{
-  public:
-  virtual bool isRet(){
-    return false;
-  }
-  virtual lType* exec( symbolTable st ){
-    cout<<":("<<endl;
-    error("...");
-  }
-  virtual void print(){
-    cout << ":(p"<<endl;
-  }
-};
-
 
 class numberType: public lType{
   public:
   int ival;
-  numberType(int v){ival = v;}
+  numberType(int v){ival = v; typ = "INT";}
   numberType() {error("empty constructor not allowed");}
   int iget() override{
     return ival;
   }  
-void print() override{
+  void print() override{
     cout << ival << "i";
   }
   lType* add(lType* r) override{
-    
-    return new numberType(ival + r->iget());
+    if (r->typ == "INT"){
+      return new numberType(ival + r->iget());
+    }
+    else {
+      notImpl("add");
+    }
   }
   lType* sub(lType* r) override{
-    return new numberType(ival - r->iget());
+    if (r->typ == "INT"){
+      return new numberType(ival - r->iget());
+    }
+    else {
+      notImpl("sub");
+    }
   }
   lType* mul(lType* r) override{
-    return new numberType(ival * r->iget());
+    if (r->typ == "INT"){
+      return new numberType(ival * r->iget());
+    }
+    else if (r->typ == "STR"){
+      return new stringType(string(r->sget(),ival));
+    }
+    else {
+      notImpl("mul");
+    }
   }
   lType* div(lType* r) override{
-    return new numberType(ival / r->iget());
+    if (r->typ == "INT"){
+      return new numberType(ival / r->iget());
+    }
+    else {
+      notImpl("div");
+    }
   }
   lType* eql(lType* r) override{
-    return new numberType((int)(ival == r->iget()));
+    if (r->typ == "INT"){
+      return new numberType((int)(ival == r->iget()));
+    }
+    else {
+      notImpl("eql");
+    }
   }
   lType* neq(lType* r) override{
-    return new numberType((int)(ival != r->iget()));
+    if (r->typ == "INT"){
+      return new numberType((int)(ival != r->iget()));
+    }
+    else {
+      notImpl("neq  ");
+    }
   }
   lType* gt(lType* r) override{
-    cout << ival << r->iget() << "!!!" << endl;
-    return new numberType((int)(ival > r->iget()));
+    if (r->typ == "INT"){
+      return new numberType((int)(ival > r->iget()));
+    }
+    else {
+      notImpl("gt");
+    }
   }
   lType* lt(lType* r) override{
-    return new numberType((int)(ival < r->iget()));
+    if (r->typ == "INT"){
+      return new numberType((int)(ival < r->iget()));
+    }
+    else {
+      notImpl("lt");
+    }
   }
   bool truthy() override{
     return (ival != 0);
@@ -227,9 +161,6 @@ class fnType : public lType{
     cout << "**";
     rs->print();
     cout<<endl;
-    for (auto& [key,val]:mp){
-      delete val;
-    }
     return rs;
   }
 };
@@ -245,8 +176,19 @@ class intNode : public astNode{
   lType* exec(symbolTable st) override{
     return new numberType(val);
   }
-  
 };
+class stringNode : public astNode{
+  public:
+  string val;
+  stringNode(string v){ val = v; }
+  void print() override{
+    cout << "'" << val << "'";
+  }
+  lType* exec(symbolTable st) override{
+    return new stringType(val);
+  }
+};
+
 class binopNode : public astNode{
   public:
   astNode* l;
@@ -355,7 +297,7 @@ class unOpNode : public astNode{
   void print() override {
     cout << "[" <<  ((op == tt("SUB"))?"-":"+") ;
     lh->print();
-    cout <<  "]";
+    cout <<  "]"; 
   }
 };
 
