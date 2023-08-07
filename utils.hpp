@@ -41,11 +41,20 @@ int tt(string s){
     {"EQL",10},{"EQ",11},{"LCB",12},
     {"RCB",13},{"NE",14},{"GT",15},
     {"LT",16},{"AND",17},{"OR",18},
-    {"CMA",19},{"DOT",20},
+    {"CMA",19},{"DOT",20},{"STR",21},
   
     {"NONE",100},{"NUL",101}
   };
   
   return tt_map[s];
 }
+
+string rep(string x,int n){
+  string r = "";
+  for(;n>0;n--){
+    r += x;
+  }
+  return r;
+}
+
 #endif
