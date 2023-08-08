@@ -41,8 +41,6 @@ binopNode(astNode* lh,astNode* rh,int o){l = move(lh);r=move(rh);op=o;}
   lType* exec(symbolTable st) override{
     lType* lh = l->exec(st);
     lType* rh = r->exec(st);
-    rh->print();
-    cout<<"#$*"<<endl;
     lType* r;
     if (op == tt("ADD")){
       r =  ( (lh)->add(rh) );
