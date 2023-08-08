@@ -28,6 +28,13 @@ class stringType : public lType{
   bool truthy() override{
     return sval.length() > 0;
   }
+  int pow(int n){
+    int r = 1;
+    for ( int c=0; c<n; c++ ){
+      r *= n;
+    }
+    return r;
+  }
   lType* getProp(string) override;
 };
 
@@ -112,6 +119,7 @@ class numberType: public lType{
   bool truthy() override{
     return (ival != 0);
   }
+  lType* getProp(string) override;
   
 };
 
@@ -168,29 +176,49 @@ class fnType : public lType{
     }
     
     lType* rs = blk->exec(nst);
-    cout << "**";
-    rs->print();
-    cout<<endl;
     return rs;
   }
 };
 
  
 
-template<int N>
-class builtInFn : public astNode{
+class builtInFn : public lType{
   public:
   function<lType*(vector<lType*>)> fn;
   int argn;
+  void print() override{
+    cout << "<builtin>";
+  }
   builtInFn(int a,
-      const function<lType*(vector<lType*>)> f){
+      function<lType*(vector<lType*>)> f){
       argn = a;
       fn = f;
   }
   lType* call(vector<lType*> v,symbolTable st){
+    if (v.size() > argn){
+      error("too many arguments");
+    }
+    else if (v.size() < argn){
+      error("too few arguments");
+    }
     return fn(v);
   }
-  
-  
 };
+
+lType* numberType::getProp(string p){
+   if ( p == "pow"){
+      return new builtInFn(1,[this](vector<lType* >x)->lType*{
+        int n = ival;
+        int r = 1;
+        for ( int c=0; c<x[0]->iget(); c++ ){
+          r *= n; 
+        }
+        return new numberType(r);});
+    }
+    else {
+      error("no property '"+p+"'");
+    }   
+}
+
+        
 #endif
