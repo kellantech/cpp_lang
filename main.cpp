@@ -1,7 +1,14 @@
+#define INFO 1
+
 #include <iostream>
 #include <map>
 #include <vector>
 #include <functional>
+#include <fstream>
+#include <sstream> 
+#include <regex>
+
+
 using namespace std;
 
 //
@@ -24,36 +31,38 @@ class symbolTable;
 #include "parser/parser.hpp"
 
 
+#include "preprocess.hpp"
 
 
 
-lType* test(vector<lType*> inp){
-  return new stringType(":) !!");
+
+lType* print(vector<lType*> inp){
+  inp[0]->print();
+  cout << endl;
+  return new None;
 }
 
 ///
-int main() {
+int main(int argc ,char** argv) {///////////
   map<string,lType*> m;
   symbolTable gst(m);
-  builtInFn tst(0,&test);
-  gst.set("test", &tst);
-string inp;
-  while (1){
-    inp = "";
-    cout<<"lexer parser inter0> ";
-    getline(cin,inp);
-    cout<<inp<<"!"<<endl;
-    lexer ls (inp);
-    vector<token>r = ls.gen_toks();
+  builtInFn printFN(1,&print);
+  gst.set("print", &printFN);
+  string inp = readFile("main.?");
+  cout << "!" << endl;
+  inp = imp(inp);
+  lexer ls (inp);
+  cout << '!'<<endl;
+  vector<token>r = ls.gen_toks();
+  if (INFO){  
     for(auto e:r) e.print();
-    
     cout<<endl;
-    parser p (r);
-    astNode* exp = p.logical_expr();
-    exp -> print();
-    cout<<endl;
-    exp -> exec(gst) -> print();
-    cout<<endl;
-    ///gst.get("x") -> print();
-    }
+  }//
+  parser p (r);
+  astNode* exp = p.block();
+  if (INFO){ exp -> print(); }
+  cout<<endl;
+  exp -> exec(gst) -> print();
+  cout<<endl;
+    ///
 }
