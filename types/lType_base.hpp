@@ -39,7 +39,7 @@ class lType{
     error("not callable");
   }
   virtual lType* getProp(string p) {
-    error("no proptery '"+p+"'" );
+    error("no property '"+p+"'" );
   }
 
 };
