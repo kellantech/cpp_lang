@@ -57,4 +57,12 @@ string rep(string x,int n){
   return r;
 }
 
+string readFile(string n) {
+    ifstream inFile;
+    inFile.open(n);
+    stringstream strStream;
+    strStream << inFile.rdbuf(); 
+    inFile.close();
+    return strStream.str();
+}
 #endif
