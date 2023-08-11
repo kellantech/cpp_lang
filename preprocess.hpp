@@ -1,12 +1,25 @@
 #ifndef _PREP_H
 #define _PREP_H
 
-string imp(string n){
-  regex r{"import \"([a-zA-z]*)\""};
+tuple<string,vector<string>> imp(string n){
+  string n_c = n;
+  regex r{"import \"([a-zA-z0-9_]*)\""};
   smatch m;
-  regex_search(n,m,r);
-  string fc = readFile(m.str(1) + ".?");
-  return regex_replace(n,r,fc);
+  string fc;
+  vector<string> bn;
+  while (regex_search(n,m,r)){
+    if (!filesystem::exists(m.str(1) + ".?")){
+      bn.push_back(m.str(1));
+      n_c = regex_replace(n_c,r," ",regex_constants::format_first_only);
+      n = m.suffix();
+    }
+    else {
+      fc = readFile(m.str(1) + ".?");
+      n_c =  regex_replace(n_c,r,fc,regex_constants::format_first_only);
+      n = m.suffix();
+    }
+  };
+  return make_tuple(n_c,bn);
 }
 
 
