@@ -40,10 +40,10 @@ class stringType : public lType{
 
 class numberType: public lType{
   public:
-  int ival;
-  numberType(int v){ival = v; typ = "INT";}
+  float ival;
+  numberType(float v){ival = v; typ = "INT";}
   numberType() {error("empty constructor not allowed");}
-  int iget() override{
+  float iget() override{
     return ival;
   }  
   void print() override{
