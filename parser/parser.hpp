@@ -23,7 +23,7 @@ public:
     if (cur.type == tt("INT")){
       string tmp = cur.val;
       next();
-      ret = new intNode(stoi(tmp));
+      ret = new intNode(stof(tmp));
     }
     else if (cur.type == tt("STR")){
       string tmp = cur.val;
