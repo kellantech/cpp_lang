@@ -2,10 +2,10 @@
 #define LTYPE_H
 class lType{
   public:
-  int ival;
+  float ival;
   string sval;
   string typ;
-  virtual int iget(){error("virtual");}
+  virtual float iget(){error("virtual");}
   virtual string sget(){error("virtual");}
   virtual void print(){cout << ":[";};
   virtual lType* add(lType* r) {
