@@ -1,19 +1,19 @@
 #define INFO 1
 
 #include <iostream>
-#include <map>//
-#include <vector>////
+#include <map>
+#include <vector>
 #include <functional>
 #include <fstream>
 #include <sstream> 
 #include <regex>
 #include <filesystem>
 #include <tuple>
-
+#include <cmath>
 
 using namespace std;
 
-//
+
 #include "utils.hpp"
 
 class lType;
@@ -34,10 +34,6 @@ class symbolTable;
 
 #include "preprocess.hpp"
 #include "getMod.hpp"
-
-
-
-
 
 
 lType* print(vector<lType*> inp){
@@ -73,4 +69,4 @@ int main(int argc ,char** argv) {
   exp -> exec(gst) -> print();
   cout<<endl;
     
-}
+}///
