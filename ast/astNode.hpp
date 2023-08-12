@@ -2,8 +2,8 @@
 #define _ASTNODE_H
 class intNode : public astNode{
   public:
-  int val;
-  intNode(int v){val = v;}
+  float val;
+  intNode(float v){val = v;}
   void print() override {
     cout << val << " ";
   }
