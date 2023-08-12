@@ -130,10 +130,11 @@ public:
       }
       else if (isdigit(cur)){
         string r;
-        while (isdigit(cur)){
+        while (isdigit(cur) || cur == '.'){
           r += string{cur};
           next();
         }
+        cout << "&"<<r <<endl;
         tks.push_back(token(tt("INT"),r));
       }
       else{
