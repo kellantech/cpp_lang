@@ -134,7 +134,6 @@ public:
           r += string{cur};
           next();
         }
-        cout << "&"<<r <<endl;
         tks.push_back(token(tt("INT"),r));
       }
       else{
