@@ -5,10 +5,10 @@
 
 void getMod(string nm,symbolTable& st){
   if (nm == "math"){
-    MATH_add(st);
+    MATH::MATH_add(st);
   }
   else if (nm == "random"){
-    RAND_add(st);
+    RAND::RAND_add(st);
   }
   else {
     error("no module named "+nm);
