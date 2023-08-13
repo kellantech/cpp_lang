@@ -10,7 +10,7 @@
 #include <filesystem>
 #include <tuple>
 #include <cmath>
-
+//////
 using namespace std;
 
 
@@ -42,13 +42,20 @@ lType* print(vector<lType*> inp){
   return new None;
 }
 
+lType* input(vector<lType*> inp){
+  print(inp);
+  string in;
+  cin >> in;
+  return new stringType(in);
+}
 
 int main(int argc ,char** argv) {
   vector<string> b;
   map<string,lType*> m;
   symbolTable gst(m);
-  builtInFn printFN(1,&print);
-  gst.set("print", &printFN);
+  gst.set("print", new builtInFn(1,&print));
+  gst.set("input", new builtInFn(1,&input));
+  
   string inp = readFile("main.?");
   auto tp = imp(inp);
   inp = get<0>(tp);
@@ -64,9 +71,9 @@ int main(int argc ,char** argv) {
   }
   parser p (r);
   astNode* exp = p.block();
-  if (INFO){ exp -> print(); }
+  if (INFO){ exp->print(); }
   cout<<endl;
-  exp -> exec(gst) -> print();
+  exp->exec(gst)->print();
   cout<<endl;
     
-}///
+}///////////////
