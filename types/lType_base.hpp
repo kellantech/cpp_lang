@@ -4,9 +4,11 @@ class lType{
   public:
   float ival;
   string sval;
+  vector<lType*> lval;
   string typ;
   virtual float iget(){error("virtual");}
   virtual string sget(){error("virtual");}
+  virtual vector<lType*> lget(){error("virtual");}
   virtual void print(){cout << ":[";};
   virtual lType* add(lType* r) {
     error("add not implemented");
