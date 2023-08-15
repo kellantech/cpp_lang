@@ -192,6 +192,22 @@ public:
         error("expected '('");
       }
     }
+    else if (cur.type == tt("LB")){
+      next();
+      vector<astNode*> v;
+      while (cur.type != tt("RB")){
+        
+        v.push_back(logical_expr());
+        if (cur.type == tt("CMA")){
+          next();
+        }
+        if (cur.type == tt("RB")){
+          break;
+        }
+      }
+      next();
+      return new listNode(v);
+    }
     int op[] = {tt("AND"),tt("OR")};
     return binOp(op,"cmp",2);
   }
