@@ -396,4 +396,27 @@ class propGetNode : public astNode{
     return nd->exec(st)->getProp(prop);
   }
 };
+class listNode : public astNode{
+  public:
+  vector<astNode*> lv;
+  listNode(vector<astNode*> l){
+    lv = l;
+  }
+  void print() override {
+    cout << "[";
+    for(astNode* l:lv){
+      l->print();
+      cout << ", ";
+    }
+    cout << "]";
+  }
+  lType* exec(symbolTable st) override {
+    vector<lType*> v;
+    for (astNode* l : lv){
+      v.push_back(l->exec(st));
+    }
+    return new listType(v);
+  }
+};
+
 #endif
