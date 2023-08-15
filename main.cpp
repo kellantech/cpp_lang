@@ -10,7 +10,8 @@
 #include <filesystem>
 #include <tuple>
 #include <cmath>
-//////
+#include <cstdio>
+
 using namespace std;
 
 
