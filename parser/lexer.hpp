@@ -44,6 +44,14 @@ public:
         tks.push_back(token(tt("RP")));
         next();
       }
+      else if (cur == '['){
+        tks.push_back(token(tt("LB")));
+        next();
+      }
+      else if (cur == ']'){
+        tks.push_back(token(tt("RB")));
+        next();
+      }
       else if (cur == '{'){
         tks.push_back(token(tt("LCB")));
         next();
