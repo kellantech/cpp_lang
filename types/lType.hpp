@@ -220,5 +220,20 @@ lType* numberType::getProp(string p){
     }   
 }
 
+class listType : public lType{
+  public:
+  vector<lType*> lval;
+  listType(vector<lType*> l){
+    lval = l;
+  }
+  void print() override{
+    cout << "[";
+    for(lType* l:lval){
+      l->print();
+      cout << ", ";
+    }
+    cout << "]";
+  }
+};
         
 #endif
