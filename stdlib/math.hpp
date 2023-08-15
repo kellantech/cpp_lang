@@ -41,7 +41,10 @@ namespace MATH{
     lType* b = v[1];
     return new numberType(pow(pow(a->iget(),2)+pow(b->iget(),2),0.5));
   }
-
+  
+  
+  
+  
   
   void MATH_add(symbolTable& st){
     
