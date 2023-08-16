@@ -257,6 +257,17 @@ class listType : public lType{
     if (nm == "len"){
       return new numberType(lval.size());
     }
+    else if (nm == "get"){
+      return new builtInFn(1,[this](vector<lType*> v)->lType*{
+        return this->lval[v[0]->iget()];
+      });
+    }
+    else if (nm == "set") {
+      return new builtInFn(2,[this](vector<lType*> v)->lType*{
+        this->lval[v[0]->iget()] = v[1];
+        return new None;
+      });
+    }
     else {
       error("no propterty "+nm);
     }
