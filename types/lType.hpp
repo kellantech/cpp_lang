@@ -225,6 +225,10 @@ class listType : public lType{
   vector<lType*> lval;
   listType(vector<lType*> l){
     lval = l;
+    typ = "LIST";
+  }
+  vector<lType*> lget() override{
+    return lval;
   }
   void print() override{
     cout << "[";
@@ -233,6 +237,29 @@ class listType : public lType{
       cout << ", ";
     }
     cout << "]";
+  }
+  lType* add(lType* rh) override{
+   if (rh->typ == "LIST"){
+     vector<lType*>r;
+     for (lType* e:lval){
+       r.push_back(move(e));
+     }
+     for (lType* e:rh->lget()){
+       r.push_back(move(e));
+     }
+     return new listType(r);
+   } 
+   else{
+     error("add not implemented");
+   }
+  }
+  lType* getProp(string nm){
+    if (nm == "len"){
+      return new numberType(lval.size());
+    }
+    else {
+      error("no propterty "+nm);
+    }
   }
 };
         
