@@ -6,8 +6,8 @@ namespace SYS{
     
     return (!sc)?readFile(fnm):"command failed";
   }
-  void sys_exec(string s){
-    system(s.c_str());
+  int sys_exec(string s){
+    return system(s.c_str());
   }
   void SYS_add(symbolTable& st){
     st.set("shellget",new builtInFn(1,[](vector <lType*> v)->lType*{
@@ -15,7 +15,7 @@ namespace SYS{
     }));
     st.set("shell",new builtInFn(1,[](vector <lType*> v)->lType*{
       sys_get(v[0]->sget());
-      return new None;
+      return new lNone;
     }));
   }
 }
