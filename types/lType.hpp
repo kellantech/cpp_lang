@@ -14,7 +14,8 @@ class stringType : public lType{
       return new stringType(sval + r->sget());
     }
     else {
-      notImpl("add");
+      ntop("+","str",r->typ);
+      return nullptr;
     }
   }
   lType* mul(lType* r) override{
@@ -22,12 +23,15 @@ class stringType : public lType{
       return new stringType(rep(sval,r->iget()));
     }
     else {
-      notImpl("mul");
+      ntop("*","str",r->typ);
+      return nullptr;
     }
   }
+  
   bool truthy() override{
     return sval.length() > 0;
   }
+  
   int pow(int n){
     int r = 1;
     for ( int c=0; c<n; c++ ){
@@ -35,6 +39,7 @@ class stringType : public lType{
     }
     return r;
   }
+  lType* eql(lType*) override;
   lType* getProp(string) override;
 };
 
@@ -54,7 +59,8 @@ class numberType: public lType{
       return new numberType(ival + r->iget());
     }
     else {
-      notImpl("add");
+      ntop("+","int",r->typ);
+      return nullptr;
     }
   }
   lType* sub(lType* r) override{
@@ -62,7 +68,8 @@ class numberType: public lType{
       return new numberType(ival - r->iget());
     }
     else {
-      notImpl("sub");
+      ntop("-","int",r->typ);
+      return nullptr;
     }
   }
   lType* mul(lType* r) override{
@@ -73,7 +80,8 @@ class numberType: public lType{
       return new stringType(rep(r->sget(),ival));
     }
     else {
-      notImpl("mul");
+      ntop("*","int",r->typ);
+      return nullptr;
     }
   }
   lType* div(lType* r) override{
@@ -81,7 +89,8 @@ class numberType: public lType{
       return new numberType(ival / r->iget());
     }
     else {
-      notImpl("div");
+      ntop("/","int",r->typ);
+      return nullptr;
     }
   }
   lType* eql(lType* r) override{
@@ -89,7 +98,8 @@ class numberType: public lType{
       return new numberType((int)(ival == r->iget()));
     }
     else {
-      notImpl("eql");
+      ntop("==","int",r->typ);
+      return nullptr;
     }
   }
   lType* neq(lType* r) override{
@@ -97,7 +107,8 @@ class numberType: public lType{
       return new numberType((int)(ival != r->iget()));
     }
     else {
-      notImpl("neq  ");
+      ntop("!=","int",r->typ);
+      return nullptr;
     }
   }
   lType* gt(lType* r) override{
@@ -105,7 +116,8 @@ class numberType: public lType{
       return new numberType((int)(ival > r->iget()));
     }
     else {
-      notImpl("gt");
+      ntop(">","int",r->typ);
+      return nullptr;
     }
   }
   lType* lt(lType* r) override{
@@ -113,7 +125,8 @@ class numberType: public lType{
       return new numberType((int)(ival < r->iget()));
     }
     else {
-      notImpl("lt");
+      ntop("<","int",r->typ);
+      return nullptr;
     }
   }
   bool truthy() override{
@@ -123,12 +136,12 @@ class numberType: public lType{
   
 };
 
-class None : public lType{
+class lNone : public lType{
   void print() override{
     cout<<"null";  
   }
   bool truthy() override{
-    return new numberType(0);
+    return false;
   }
 };
 
@@ -138,6 +151,7 @@ lType* stringType::getProp(string p){
     }
     else {
       error("no property '"+p+"'");
+      return nullptr;
     }
   }
 
@@ -194,7 +208,7 @@ class builtInFn : public lType{
       argn = a;
       fn = f;
   }
-  lType* call(vector<lType*> v,symbolTable st){
+  lType* call(vector<lType*> v,symbolTable st) override {
     if (v.size() > argn){
       error("too many arguments");
     }
@@ -204,6 +218,15 @@ class builtInFn : public lType{
     return fn(v);
   }
 };
+lType* stringType::eql(lType* r){
+    if (r->typ == "STR"){
+      return new numberType(r->sget() == sval);
+    }
+    else {
+      notImpl("eql");
+      return nullptr;
+    }
+ }
 
 lType* numberType::getProp(string p){
    if ( p == "pow"){
@@ -217,9 +240,9 @@ lType* numberType::getProp(string p){
     }
     else {
       error("no property '"+p+"'");
+      return nullptr;
     }   
 }
-
 class listType : public lType{
   public:
   vector<lType*> lval;
@@ -250,10 +273,11 @@ class listType : public lType{
      return new listType(r);
    } 
    else{
-     error("add not implemented");
+     ntop("+","list",rh->typ);
+     return nullptr;
    }
   }
-  lType* getProp(string nm){
+  lType* getProp(string nm) override {
     if (nm == "len"){
       return new numberType(lval.size());
     }
@@ -265,11 +289,90 @@ class listType : public lType{
     else if (nm == "set") {
       return new builtInFn(2,[this](vector<lType*> v)->lType*{
         this->lval[v[0]->iget()] = v[1];
-        return new None;
+        return new lNone;
+      });
+    }
+    else if (nm == "del") {
+      return new builtInFn(1,[this](vector<lType*> v)->lType*{
+        int ind = v[0]->iget();
+        vector<lType*> tmp;
+        for(int i = 0; i < ind; i++){
+          tmp.push_back(move(lval[i]));
+        }
+        for(int i = ind + 1; i < lval.size(); i++){
+          tmp.push_back(move(lval[i]));
+        }
+        
+        lval = tmp;
+        return new lNone;
+      });
+    }
+    else if (nm == "insert") {
+      return new builtInFn(2,[this](vector<lType*> v)->lType*{
+        int ind = v[0]->iget();
+        if (ind >= lval.size()){
+          error("list index out of range");
+        }
+        vector<lType*> tmp;
+        for(int i = 0; i <= ind; i++){
+          tmp.push_back(move(lval[i]));
+        }
+        tmp.push_back(v[1]);
+        
+        for(int i = ind+1; i < lval.size(); i++){
+          tmp.push_back(move(lval[i]));
+        }
+        
+        lval = tmp;
+        return new lNone;
+      });
+    }
+    else if (nm == "reverse"){
+      return new builtInFn(0,
+        [this](vector<lType*>v)->lType*{
+        vector<lType*>tmp;
+        for(lType* l: lval){
+          
+ tmp.insert(tmp.begin(),move(l));
+        }
+        lval = tmp;
+        return new lNone;
+      });
+    }
+    else if (nm == "sort"){
+      return new builtInFn(0,
+        [this](vector<lType*> v)->lType*{     
+          vector<lType*>t;
+          while (true){
+            
+            if (lval.size() == 0){
+              break;
+            }
+            lType* e = lval.back();
+            lval.pop_back();
+            if (t.size() == 0){
+              t.push_back(e);
+            }
+            else{
+             int i = 0;
+             for (lType* s : t){
+               if (e->gt(s)->truthy()){
+                  t.insert(t.begin()+i,e);
+                  goto done;
+               }  
+               ++i;
+             } 
+            t.push_back(e);
+            done:;
+            } 
+          }
+          lval = t;
+          return new lNone;
       });
     }
     else {
       error("no propterty "+nm);
+      return nullptr;
     }
   }
 };
