@@ -8,9 +8,11 @@ class astNode{
   virtual lType* exec( symbolTable st ){
     cout<<":("<<endl;
     error("...");
+    return nullptr;
   }
   virtual void print(){
     cout << ":(p"<<endl;
   }
+  virtual Value* codegen() = 0;
 };
 #endif
