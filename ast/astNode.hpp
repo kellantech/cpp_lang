@@ -10,6 +10,7 @@ class intNode : public astNode{
   lType* exec(symbolTable st) override{
     return new numberType(val);
   }
+  Value* codegen() override;
 };
 class stringNode : public astNode{
   public:
@@ -21,6 +22,7 @@ class stringNode : public astNode{
   lType* exec(symbolTable st) override{
     return new stringType(val);
   }
+  Value* codegen() override;
 };
 
 class binopNode : public astNode{
@@ -78,6 +80,7 @@ binopNode(astNode* lh,astNode* rh,int o){l = move(lh);r=move(rh);op=o;}
     
     return r;
   }
+  Value* codegen() override;
 };
 
 class blockNode : public astNode{
@@ -102,7 +105,7 @@ public:
         op->exec(st);
       }
     }
-    return new None();
+    return new lNone();
   }
   void print() override{
   cout<<"{";
@@ -111,6 +114,8 @@ public:
     }
     cout<<"}";
   }
+Value* codegen() override;
+
 };
 
 class unOpNode : public astNode{
@@ -133,6 +138,7 @@ class unOpNode : public astNode{
     lh->print();
     cout <<  "]"; 
   }
+Value* codegen() override;
 };
 
 class varSetNode : public astNode{
@@ -146,13 +152,14 @@ astNode* val;
   lType* exec(symbolTable st) override{
     lType* l = val->exec(st);
     st.set(nm,move(l));
-    return new None();
+    return new lNone();
   }
   void print() override{
     cout << "[ " << nm << " = ";
     val->print();
     cout<<"]";
   }
+Value* codegen() override;
 };
 
     
@@ -164,11 +171,12 @@ string nm;
  }
   lType* exec(symbolTable st) override{    
     return st.get(nm);
-    return new None();
+    return new lNone();
   }
   void print() override{
     cout << "{" << nm << "}";
   }
+  Value* codegen() override;
 };
 
 class ifNode: public astNode{
@@ -220,22 +228,23 @@ public:
   lType* exec(symbolTable st) override{
     if (cnd->exec(st)->truthy()){
       blk->exec(st);
-      return new None;
+      return new lNone;
     }
     if (el){
      for (int i=0;i<elc.size();i++){
        if (elc[i]->exec(st)->truthy()){
          elb[i]->exec(st);
-         return new None;
+         return new lNone;
         }
       } 
     }
     if (els){
       ebk->exec(st);
-      return new None;
+      return new lNone;
     }
-    return new None;
+    return new lNone;
   }
+Value* codegen() override;
 };
 
 class whileNode: public astNode{
@@ -253,20 +262,17 @@ class whileNode: public astNode{
     bk->print();
     cout<<endl;
     string _;
-   // cin>>_;
   }
   lType* exec(symbolTable st) override{
     string _;
     while (1){
       lType* c = cnd->exec(st);
-      c->print();
       if (!c->truthy()) { break;}
       bk->exec(st);
-      //cin>>_;
     }
-    return new None;
+    return new lNone;
   }
-
+Value* codegen() override;
 };
 
 class forNode : public astNode{
@@ -298,8 +304,9 @@ class forNode : public astNode{
       blk->exec(st);
       inc->exec(st);
     }
-    return new None;
+    return new lNone;
   }
+Value* codegen() override;
 };
 
 class fnDefNode : public astNode{
@@ -328,21 +335,23 @@ class fnDefNode : public astNode{
   lType* exec(symbolTable st) override{
     lType* fn = new fnType(move(blk),args,nm);
     st.set(nm,fn);
-    return new None;
+    return new lNone;
   }
+Value* codegen() override;
 };
 
 class fnCallNode : public astNode{
   public:
   astNode* cl;
+  string nm;
   vector<astNode*> args;
-  fnCallNode(astNode* c,vector<astNode*> arg){
+  fnCallNode(astNode* c,vector<astNode*> arg,string n){
     args = arg;
     cl = c;
+    nm = n;
   }
   void print() override{
-    cout << "FNCALL ";
-    cl->print();
+    cout << "FNCALL " << nm;
     cout << " (";
     for(astNode* a:args){
       a->print();
@@ -359,6 +368,7 @@ class fnCallNode : public astNode{
     return fn->call(xrg,st);
     
   }
+Value* codegen() override;
 };
 
 class retNode : public astNode{
@@ -378,6 +388,7 @@ class retNode : public astNode{
   bool isRet() override{
     return true;
   }
+Value* codegen() override;
 };
 
 class propGetNode : public astNode{
@@ -395,6 +406,7 @@ class propGetNode : public astNode{
   lType* exec(symbolTable st) override{
     return nd->exec(st)->getProp(prop);
   }
+Value* codegen() override;
 };
 class listNode : public astNode{
   public:
@@ -417,6 +429,29 @@ class listNode : public astNode{
     }
     return new listType(v);
   }
+Value* codegen() override;
+};
+
+class fnProtoNode : public astNode{
+  public:
+  string nm;
+  vector<string> args;
+  fnProtoNode(string n,vector<string>a){
+    nm = n;
+    args = a;
+  }
+  void print() override {
+    cout << "PROTO " << nm << "(";
+    for( string n : args){
+      cout << n << ", ";
+    }
+    cout << ")";
+  }
+  lType* exec(symbolTable st) override {
+    error("no exec");
+    return nullptr;
+  }
+Function* codegen() override ;
 };
 
 #endif

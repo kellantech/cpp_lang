@@ -10,7 +10,7 @@ public:
   void next(){
     ind++;
     if (ind >= tkn.size()){
-      cur =  token(tt("NONE"));
+      cur =  token(tt("NONE"),cur.p);
     }
     else {
       cur = tkn[ind];
@@ -19,6 +19,7 @@ public:
   
   astNode* value(){
     astNode* ret;
+    string nm;
     
     if (cur.type == tt("INT")){
       string tmp = cur.val;
@@ -40,6 +41,7 @@ public:
     else if (cur.type == tt("ID")){
       string n = cur.val;
       next();
+      nm = n;
       
       ret = new varGetNode(n); 
     }
@@ -66,7 +68,11 @@ public:
     }
 
     else{
-      error("expcted int");
+      if (cur.type == tt("NONE")){
+        error("unexpected EOF",cur.p-1);
+      }
+      
+      error("expected int",cur.p-1);
       return nullptr;
     }
     check:;
@@ -87,7 +93,7 @@ public:
           if (cur.type == tt("CMA")){ next(); }
         }
         next();
-        ret = new fnCallNode(ret,arg);
+        ret = new fnCallNode(ret,arg,nm);
         goto check;
       }
     return move(ret);
@@ -108,11 +114,11 @@ public:
         nm = cur.val;
       }
       else{
-        error("expected identifier");
+        error("expected identifier",cur.p);
       }
       next();
       if (cur.type != tt("EQL")){
-        error("expected '='");
+        error("expected '='",cur.p);
       }
       next();
       astNode* a = logical_expr();
@@ -121,8 +127,6 @@ public:
     if (cur.type == tt("KWD") && cur.val == "if"){
       next();
       astNode* cnd = logical_expr();
-      cur.print();
-      cout << "!&^"<<endl;
       astNode* bl = block();
       vector<astNode*> ecv;
       vector<astNode*> ebv;
@@ -174,23 +178,26 @@ public:
               return new forNode(i,c,ic,b);
             }
             else{
-                error("expected ')'");
+                error("expected ')'",cur.p);
             }
           }
           else {
-           error("expected ','");
+           error("expected ','",cur.p);
           }    
         }
         else {
-          error("expected ','");
+          error("expected ','",cur.p);
         }
       }
       else{
-        error ("expected '('");
+        error ("expected '('",cur.p);
       }
     }
     else if (cur.type == tt("KWD") && cur.val == "fn"){
       next();
+      if (cur.type != tt("ID")){
+        error("expected identifier",cur.p);
+      }
       string nm = cur.val;
       next();
       vector<string> arg;
@@ -206,8 +213,30 @@ public:
         return new fnDefNode(nm,arg,blk);
       }
       else {
+        error("expected '('",cur.p);
+      }
+    }
+    else if (cur.type == tt("KWD") && cur.val == "proto"){
+      next();
+      if (cur.type != tt("ID")){
+        error("expected identifer");
+      }
+      string n = cur.val;
+      next();
+      if (cur.type != tt("LP")){
         error("expected '('");
       }
+      next();
+      vector<string> arg;
+      while (cur.type != tt("RP")){
+        arg.push_back(cur.val);
+        next();
+        if (cur.type == tt("CMA")) {
+          next(); 
+        }
+      }
+      next();
+      return new fnProtoNode(n,arg);
     }
     int op[] = {tt("AND"),tt("OR")};
     return binOp(op,"cmp",2);
@@ -218,7 +247,7 @@ public:
   }
   astNode* block(bool isFn=false){
     vector<astNode*> op;
-    if (cur.type != tt("LCB")){ error("expected '{'"); }
+    if (cur.type != tt("LCB")){ error("expected '{'",cur.p); }
     else{
       next();
       while (1){
@@ -235,6 +264,7 @@ public:
       }
     }
     next();
+    
     return new blockNode(op,isFn);
   }
   astNode* binOp(int tks[],string fn,int sz){
@@ -244,7 +274,7 @@ public:
     else if (fn == "term") { node = term(); }
     else if (fn == "expr") { node = expr(); }
     else if (fn == "cmp") { node = cmp(); }
-    else { error("unknown function : parser : binOP"); }
+    else { error("unknown function : parser : binOP",cur.p); }
     
     while (1){
       if (cur.type == -1 || ! findary<int>(tks, cur.type, sz)) { break; }

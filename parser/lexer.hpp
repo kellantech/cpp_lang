@@ -3,16 +3,19 @@ class lexer{
 public:
   string txt;
   int ind = -1;
+  int ln = 1;
   char cur = (char)2;
-  vector<string> KWDS {"var","if","else","elif","while","for","fn","ret"};
+  vector<string> KWDS {"var","if","else","elif","while","for","fn","ret","proto"};
   lexer(string t){
     txt = t;
     next();
   }
   void next(){
     ind++;
+    if (cur == '\n'){ln++;}
     if(ind >= txt.length()){cur = (char)2;}
     else { cur = txt[ind]; }
+    
   }
 
 
@@ -21,88 +24,88 @@ public:
     while(1){
       char c = cur;
       if (cur == '+'){
-        tks.push_back(token(tt("ADD")));
+        tks.push_back(token(tt("ADD"),pos(ln)));
         next();
       }
       else if (cur == '-'){
-        tks.push_back(token(tt("SUB")));
+        tks.push_back(token(tt("SUB"),pos(ln)));
         next();
       }
       else if (cur == '*'){
-        tks.push_back(token(tt("MUL")));
+        tks.push_back(token(tt("MUL"),pos(ln)));
         next();
       }
       else if (cur == '/'){
-        tks.push_back(token(tt("DIV")));
+        tks.push_back(token(tt("DIV"),pos(ln)));
         next();
       }
       else if (cur == '('){
-        tks.push_back(token(tt("LP")));
+        tks.push_back(token(tt("LP"),pos(ln)));
         next();
       }
       else if (cur == ')'){
-        tks.push_back(token(tt("RP")));
+        tks.push_back(token(tt("RP"),pos(ln)));
         next();
       }
       else if (cur == '['){
-        tks.push_back(token(tt("LB")));
+        tks.push_back(token(tt("LB"),pos(ln)));
         next();
       }
       else if (cur == ']'){
-        tks.push_back(token(tt("RB")));
+        tks.push_back(token(tt("RB"),pos(ln)));
         next();
       }
       else if (cur == '{'){
-        tks.push_back(token(tt("LCB")));
+        tks.push_back(token(tt("LCB"),pos(ln)));
         next();
       }
       else if (cur == '}'){
-        tks.push_back(token(tt("RCB")));
+        tks.push_back(token(tt("RCB"),pos(ln)));
         next();
       }
       else if (cur == '!'){
         next();
         if (cur == '='){
-          tks.push_back(token(tt("NE")));
+          tks.push_back(token(tt("NE"),pos(ln)));
           next();
         }
         else {
-          error("unknown token '!'");
+          error("unknown token '!'",pos(ln));
         }
       }
       else if (cur == '>'){
-        tks.push_back(token(tt("GT")));
+        tks.push_back(token(tt("GT"),pos(ln)));
         next();
       }
       else if (cur == '<'){
-        tks.push_back(token(tt("LT")));
+        tks.push_back(token(tt("LT"),pos(ln)));
         next();
       }
       else if (cur == '&'){
-        tks.push_back(token(tt("AND")));
+        tks.push_back(token(tt("AND"),pos(ln)));
         next();
       }
       else if (cur == '|'){
-        tks.push_back(token(tt("OR")));
+        tks.push_back(token(tt("OR"),pos(ln)));
         next();
       }
       else if (cur == ','){
-        tks.push_back(token(tt("CMA")));
+        tks.push_back(token(tt("CMA"),pos(ln)));
         next();
       }
       else if (cur == '.'){
-        tks.push_back(token(tt("DOT")));
+        tks.push_back(token(tt("DOT"),pos(ln)));
         next();
       }
       else if (cur == '='){
         next();
         if(cur == '='){
-          tks.push_back(token(tt("EQ")));
+          tks.push_back(token(tt("EQ"),pos(ln)));
           next();
           continue;
         }
         else{
-          tks.push_back(token(tt("EQL")));
+          tks.push_back(token(tt("EQL"),pos(ln)));
         }
       }
       
@@ -121,7 +124,7 @@ public:
           next();
         }
         next();
-        tks.push_back(token(tt("STR"),r));
+        tks.push_back(token(tt("STR"),r,pos(ln)));
       }
       else if (isalpha(cur)){
         string r;
@@ -130,10 +133,10 @@ public:
           next();
         }
         if ( findvec<string>(KWDS,r)) {
-          tks.push_back(token(tt("KWD"),r));
+          tks.push_back(token(tt("KWD"),r,pos(ln)));
         }
         else {
-          tks.push_back(token(tt("ID"),r));
+          tks.push_back(token(tt("ID"),r,pos(ln)));
         }
       }
       else if (isdigit(cur)){
@@ -142,10 +145,10 @@ public:
           r += string{cur};
           next();
         }
-        tks.push_back(token(tt("INT"),r));
+        tks.push_back(token(tt("INT"),r,pos(ln)));
       }
       else{
-        error("unknown character '" + string{cur} + "'");
+        error("unknown character '" + string{cur} + "'",pos(ln));
       }
     }
     return tks;
