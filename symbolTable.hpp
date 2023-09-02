@@ -6,9 +6,8 @@ class symbolTable{
   map<string,lType*>& tbl;
   symbolTable* parent;
   bool p = false;
-  symbolTable(map<string,lType*>& t):tbl(t){
-    
-  }
+  symbolTable(map<string,lType*>& t)
+          :tbl(t){}
   void setParent(symbolTable* par){
     parent = move(par);
     p = true;
@@ -19,7 +18,7 @@ class symbolTable{
         return parent->get(nm);
       }
       else{
-        error("name not found");
+        error("name "+ nm +" not found");
         return nullptr;
       }
     }
