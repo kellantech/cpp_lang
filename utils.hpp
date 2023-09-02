@@ -1,10 +1,17 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include <iostream>
-#include <map>
-#include <vector>
-using namespace std;
+class pos{
+  public:
+  int ln;
+  pos(){ln = -1;}
+  pos(int l){
+    ln = l;
+  }
+  pos operator-(int RHS){
+    return pos(ln-RHS);
+  }
+};
 
 
 template <typename T>
@@ -26,11 +33,25 @@ bool findary(T ary [], T e, int s) {
 }
 
 void error(string msg){
-  cout << "error: " << msg << endl;
+  cerr << "error: " << msg << endl;
+  exit(1);
+}
+void error(string msg,pos p){
+
+  cout << "line " << p.ln << ":" << endl;
+  cerr << "error: " << msg << endl;
   exit(1);
 }
 void notImpl(string i){
   error(i+" not implemented");
+}
+
+void ntop(string op,string t1,string t2){
+  string r = "";
+  for (char c : t2){
+    r += tolower(c);
+  }
+  error("invalid operands for '"+op+"': "+t1+" and " + r);
 }
 int tt(string s){
   
@@ -55,6 +76,10 @@ string rep(string x,int n){
     r += x;
   }
   return r;
+}
+bool flexists(string nm){
+  ifstream f(nm.c_str());
+  return f.good();
 }
 
 string readFile(string n) {
