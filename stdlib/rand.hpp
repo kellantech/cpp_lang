@@ -33,7 +33,7 @@ namespace RAND{
         [](vector<lType*> v)->lType*{
           _rand_state[0] = (uint64_t)v[0]->iget();
           _rand_state[1] = (uint64_t)v[1]->iget();
-      return new None;
+      return new lNone;
     }));
   }
 }
