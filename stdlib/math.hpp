@@ -41,10 +41,15 @@ namespace MATH{
     lType* b = v[1];
     return new numberType(pow(pow(a->iget(),2)+pow(b->iget(),2),0.5));
   }
-  
-  
-  
-  
+  lType* labs(vector<lType*> v){
+    int x = v[0]->iget();
+    return new numberType((x<0)?-x:x);
+  }
+  lType* lmod(vector<lType*> v){
+    int a = v[0]->iget();
+    int b = v[1]->iget();
+    return new numberType(a%b);
+  }
   
   void MATH_add(symbolTable& st){
     
@@ -53,7 +58,9 @@ namespace MATH{
     st.set("cos", new builtInFn(1,&lcos));
     st.set("exp", new builtInFn(1,&lexp));
     st.set("sqrt", new builtInFn(1,&lsqrt));
-    st.set("hyp", new builtInFn(2,&lhyp));
+    st.set("hypt", new builtInFn(2,&lhyp));
+    st.set("abs", new builtInFn(1,&labs));
+    st.set("mod", new builtInFn(2,&lmod));
     
     st.set("pi", new numberType(3.14159265));
     st.set("e", new numberType(2.71828183));
