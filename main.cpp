@@ -1,22 +1,25 @@
 #define INFO 1
-///////
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Transforms/InstCombine/InstCombine.h"
-#include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Target/TargetOptions.h"
 
 
 #include <iostream>
@@ -75,19 +78,25 @@ void loop(){
 }
 
 int main(int argc ,char** argv) {
+  InitializeNativeTarget();
+  InitializeNativeTargetAsmPrinter();
+  InitializeNativeTargetAsmParser();
+
+  
   vector<string> b;
   map<string,lType*> m;
   symbolTable gst(m);
   gst.set("print", new builtInFn(1,&print));
   gst.set("input", new builtInFn(1,&input));
 
-
+  initModule();
   //string inp = readFile("main.?");
+  
   string inp = "";
   inp = "";
     cout << "> ";
   getline(cin,inp);
-    
+  
   while(1){
     
     
@@ -118,7 +127,15 @@ int main(int argc ,char** argv) {
         break;
     }
   }
+  InitializeAllTargetInfos();
+  InitializeAllTargets();
+  InitializeAllTargetMCs();
+  InitializeAllAsmParsers();
+  InitializeAllAsmPrinters();
+  
   cout << "********************" << endl;
   mod->print(errs(),nullptr);
   cout << "********************" << endl;
+  
+  genObj();
 }
