@@ -11,6 +11,7 @@ class intNode : public astNode{
     return new numberType(val);
   }
   Value* codegen() override;
+  
 };
 class stringNode : public astNode{
   public:
