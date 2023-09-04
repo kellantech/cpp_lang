@@ -13,6 +13,9 @@ class astNode{
   virtual void print(){
     cout << ":(p"<<endl;
   }
-  virtual Value* codegen() = 0;
+  virtual Value* codegen() = 0; 
+  virtual void jit_exec(){
+    error("jit exec not implemented");
+  }
 };
 #endif
