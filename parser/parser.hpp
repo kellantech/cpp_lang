@@ -239,7 +239,9 @@ public:
       return new fnProtoNode(n,arg);
     }
     int op[] = {tt("AND"),tt("OR")};
-    return binOp(op,"cmp",2);
+    astNode* bnop = binOp(op,"cmp",2);
+    return bnop;
+    ///return new fnDefNode("__anon_expr",vector<string>{},move(bnop));
   }
   astNode* expr(){
     int op[] = {tt("ADD"),tt("SUB")};
