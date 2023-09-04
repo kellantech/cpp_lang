@@ -2,7 +2,7 @@
 #define _CODEGEN_H
 
 Value* intNode::codegen(){
-  return ConstantFP::get(*ctx,APFloat(val));
+  return ConstantFP::get(*ctx,APFloat((double)val));
 }
 
 Value* varGetNode::codegen(){
@@ -126,8 +126,6 @@ Value* fnDefNode::codegen(){
   if(ret){
     builder->CreateRet(ret);
     verifyFunction(*fn);
-
-    FPM->run(*fn);
     return fn;
   }
   fn->eraseFromParent();
@@ -140,8 +138,45 @@ Value* propGetNode::codegen(){
 }
 
 Value* ifNode::codegen(){
-  notImpl("codegen");
-  return nullptr;
+  Value* cond = cnd->codegen();
+  if (!cond){
+    return nullptr;
+  }
+  cond = builder->CreateFCmpONE(cond,
+    ConstantFP::get(*ctx,APFloat(0.0)),"ifcond");
+
+  Function* fn = builder->GetInsertBlock()->getParent();
+  
+  BasicBlock *BBthen = BasicBlock::Create(*ctx,"then",fn);
+  BasicBlock *BBelse = BasicBlock::Create(*ctx,"else");
+  BasicBlock *BBmerge = BasicBlock::Create(*ctx,"merge");
+  builder->CreateCondBr(cond,BBthen,BBelse);
+
+  builder->SetInsertPoint(BBthen);
+  Value* thenIR = blk->codegen();
+  if (!thenIR){ return nullptr; }
+  builder->CreateBr(BBmerge);
+
+  BBthen = builder->GetInsertBlock();
+
+  fn->getBasicBlockList().push_back(BBelse);
+  builder->SetInsertPoint(BBelse);
+  Value* elseIR = ebk->codegen();
+  if (!elseIR){ return nullptr; }
+  
+  builder->CreateBr(BBmerge);
+  BBelse = builder->GetInsertBlock();
+
+  
+  fn->getBasicBlockList().push_back(BBmerge);
+  builder->SetInsertPoint(BBmerge);
+  PHINode* phi = builder->CreatePHI(
+            Type::getDoubleTy(*ctx),2,"mergetmp");
+ 
+  phi->addIncoming(thenIR,BBthen);
+  phi->addIncoming(elseIR,BBelse);
+  
+  return phi;
 }
 
 
