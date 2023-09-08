@@ -1,4 +1,3 @@
-#define INFO 1
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
@@ -74,68 +73,93 @@ lType* input(vector<lType*> inp){
   return new stringType(in);
 }
 
-void loop(){
-}
 
 int main(int argc ,char** argv) {
-  InitializeNativeTarget();
-  InitializeNativeTargetAsmPrinter();
-  InitializeNativeTargetAsmParser();
-
+  bool INFO = 0;
+  bool INTERP = 1;
+  bool IR = 0;
+  bool LINK = 0;
+  string FILE;
   
+  for (int i = 1; i < argc; i++){
+    string arg = argv[i];
+    if ( arg == "-i" || arg == "--info"){
+      INFO = true;
+    }
+    else if (arg == "-c"){
+      INTERP = 0;
+    }
+    else if (arg == "--ir"){
+      IR = true;
+    }
+    else if (arg == "-l"){
+      LINK = true;
+    }
+    else{
+      FILE = arg;
+    }
+  }
+  if(FILE == "" && LINK) { FILE = "a.out";}
+  else if (FILE == "") { FILE = "out.o"; }
+  if(!INTERP){
+    InitializeNativeTarget();
+    InitializeNativeTargetAsmPrinter();
+    InitializeNativeTargetAsmParser();
+  }
   vector<string> b;
   map<string,lType*> m;
   symbolTable gst(m);
-  gst.set("print", new builtInFn(1,&print));
-  gst.set("input", new builtInFn(1,&input));
-
+  if (INTERP){
+    gst.set("print", new builtInFn(1,&print));
+    gst.set("input", new builtInFn(1,&input));
+  }
   initModule();
-  //string inp = readFile("main.?");
   
-  string inp = "";
-  inp = "";
-    cout << "> ";
-  getline(cin,inp);
+  string inp = readFile("main.?");
   
-  while(1){
-    
-    
-    auto tp = imp(inp);
-    inp = get<0>(tp);
-    b = get<1>(tp);
-    for (string mn: b){
-      getMod(mn,gst);
-    };
-    lexer ls (inp);
-    vector<token>r = ls.gen_toks();
-    if (INFO){  
-      for(auto e:r) e.print();
+  // string inp = "";
+  // inp = "";
+  // cout << "> ";
+  // getline(cin,inp);
+  
+  auto tp = imp(inp);
+  inp = get<0>(tp);
+  b = get<1>(tp);
+  for (string mn: b){
+    if (INTERP) { getMod(mn,gst); }
+  };
+  lexer ls (inp);
+  vector<token>r = ls.gen_toks();
+  if (INFO){  
+    for(auto e:r){ e.print(); }
       cout<<endl;
-    }
-    parser p (r);
-    astNode* exp = p.logical_expr();
-    if (INFO){ exp->print(); }
-    cout<<endl;
-    runCG(exp);
-    cout << endl;
-    //exp->exec(gst)->print();
-    inp = "";
-    cout << "> ";
-    getline(cin,inp);
+  }
+  parser p (r);
+  while(1){
+  astNode* exp = p.logical_expr();
+  if (INFO){ exp->print(); }
+  if (!INTERP) { exp->codegen(); }
+  if (INTERP) { exp->exec(gst); }
+  if(p.cur.type == tt("NONE")){
+    break;
+  }
+  }
+  if (!INTERP){
+    InitializeAllTargetInfos();
+    InitializeAllTargets();
+    InitializeAllTargetMCs();
+    InitializeAllAsmParsers();
+    InitializeAllAsmPrinters();
     
-    if(inp == "q"){
-        break;
+    if (IR) { mod->print(errs(),nullptr); }
+    if (!LINK) { genObj(FILE); }
+    if (LINK) {
+      char ff[] = "/tmp/fileXXXXXX";
+      int fd = mkstemp(ff);
+      genObj(ff);
+      cout << "%" << endl;
+      system(("clang++ libio.so "+ string(ff)+" -o " + FILE +" -Wl,-rpath,`pwd` ").c_str());
     }
   }
-  InitializeAllTargetInfos();
-  InitializeAllTargets();
-  InitializeAllTargetMCs();
-  InitializeAllAsmParsers();
-  InitializeAllAsmPrinters();
   
-  cout << "********************" << endl;
-  mod->print(errs(),nullptr);
-  cout << "********************" << endl;
-  
-  genObj();
 }
