@@ -4,7 +4,7 @@
 static unique_ptr<LLVMContext> ctx;
 static unique_ptr<IRBuilder<>> builder;
 static unique_ptr<Module> mod;
-static map<string,Value*> nmvals;
+static map<string,AllocaInst*> nmvals;
 #include "codegen.hpp"
 
 
@@ -16,13 +16,9 @@ void initModule(){
 
 }
 
-void runCG(astNode* nd){
-  auto* ir = nd->codegen();
-  ir->print(errs());
-}
 
 
-void genObj(){
+void genObj(string f){
   string err;
   auto targetStr = sys::getDefaultTargetTriple();
   auto target = TargetRegistry::lookupTarget(targetStr,err);
@@ -40,7 +36,7 @@ void genObj(){
   mod->setDataLayout(machine->createDataLayout());
   mod->setTargetTriple(targetStr);
 
-  string fn = "out.o";
+  string fn = f;
   error_code ec;
   raw_fd_ostream fh(fn,ec,sys::fs::OF_None);
 
