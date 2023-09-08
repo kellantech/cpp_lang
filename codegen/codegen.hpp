@@ -1,18 +1,25 @@
 #ifndef _CODEGEN_H
 #define _CODEGEN_H
 
+AllocaInst* addAllocaToEntry(Function* fn,string name){
+  IRBuilder<> tmp_builder(&fn->getEntryBlock(),
+            fn->getEntryBlock().begin());
+  return tmp_builder.CreateAlloca(
+    Type::getDoubleTy(*ctx),nullptr,name.c_str());
+}
+
 Value* intNode::codegen(){
   return ConstantFP::get(*ctx,APFloat((double)val));
 }
 
 Value* varGetNode::codegen(){
-  Value* v = nmvals[nm];
-  if(!v){
+  AllocaInst* a = nmvals[nm];
+  if(!a){
     error("unknown variable "+nm);
     return nullptr;
   }
   else{
-    return v;
+    return builder->CreateLoad(a->getAllocatedType(),a,nm.c_str());
   }
 }
 
@@ -119,8 +126,11 @@ Value* fnDefNode::codegen(){
   }
   BasicBlock* bb = BasicBlock::Create(*ctx,"entry",fn);
   builder->SetInsertPoint(bb);
+  nmvals.clear();
   for (auto& Arg: fn->args()){
-    nmvals[string(Arg.getName())] = &Arg;
+    AllocaInst* aloc = addAllocaToEntry(fn,string(Arg.getName()));
+    builder->CreateStore(&Arg,aloc);
+    nmvals[string(Arg.getName())] = aloc;
   }
   Value* ret = blk->codegen();
   if(ret){
@@ -182,13 +192,56 @@ Value* ifNode::codegen(){
 
 
 Value* whileNode::codegen(){
-  notImpl("codegen");
-  return nullptr;
+  Function* fn = builder->GetInsertBlock()->getParent();
+  BasicBlock* BBcnd = BasicBlock::Create(*ctx,"cnd",fn);
+  BasicBlock* BBloop = BasicBlock::Create(*ctx,"loop");
+  BasicBlock* BBmerge = BasicBlock::Create(*ctx,"merge");
+
+  builder->CreateBr(BBcnd);
+  builder->SetInsertPoint(BBcnd);
+  Value* cndIR = cnd->codegen();
+  cndIR = builder->CreateFCmpONE(
+      cndIR,ConstantFP::get(*ctx,APFloat(0.0)),"whiletmp");
+  builder->CreateCondBr(cndIR,BBloop,BBmerge);
+
+  fn->getBasicBlockList().push_back(BBloop);
+  builder->SetInsertPoint(BBloop);
+  Value* blkIR = bk->codegen();
+  builder->CreateBr(BBcnd);
+
+  fn->getBasicBlockList().push_back(BBmerge);
+  builder->SetInsertPoint(BBmerge);
+  return ConstantFP::get(*ctx,APFloat(0.0));
 }
 
 Value* forNode::codegen(){
-  notImpl("codegen");
-  return nullptr;
+  Value* initIR = init->codegen();
+    
+  Function* fn = builder->GetInsertBlock()->getParent();
+  BasicBlock* BBcnd = BasicBlock::Create(*ctx,"cnd",fn);
+  BasicBlock* BBloop = BasicBlock::Create(*ctx,"loop");
+  BasicBlock* BBmerge = BasicBlock::Create(*ctx,"merge");
+
+  builder->CreateBr(BBcnd);
+
+  
+  builder->SetInsertPoint(BBcnd);
+  Value* cndIR = cnd->codegen();
+  cndIR = builder->CreateFCmpONE(cndIR,
+    ConstantFP::get(*ctx,APFloat(0.0)),"cmp");
+  builder->CreateCondBr(cndIR,BBloop,BBmerge);
+
+  fn->getBasicBlockList().push_back(BBloop);
+  builder->SetInsertPoint(BBloop);
+  blk->codegen();
+  inc->codegen();
+  builder->CreateBr(BBcnd);
+  
+  fn->getBasicBlockList().push_back(BBmerge);
+  builder->SetInsertPoint(BBmerge);
+
+  
+  return ConstantFP::get(*ctx,APFloat(0.0));
 }
 
 Value* unOpNode::codegen(){
@@ -198,8 +251,24 @@ Value* unOpNode::codegen(){
 
 
 Value* varSetNode::codegen(){
-  notImpl("codegen");
-  return nullptr;
+  Value* v = val->codegen();
+  if (!v){ return nullptr; }
+
+  Value* var = nmvals[nm];
+  if (!var){
+    Function *fn = builder->GetInsertBlock()->getParent();
+
+    Value* init = val->codegen();
+    if (!init){ return nullptr; }
+    
+    AllocaInst* aloc = addAllocaToEntry(fn,nm);
+    builder->CreateStore(init,aloc);
+    nmvals[nm] = aloc;
+    return ConstantFP::get(*ctx,APFloat(0.0));
+  }
+
+  builder->CreateStore(v,var);
+  return v;
 }
 
 
