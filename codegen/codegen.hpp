@@ -50,8 +50,7 @@ Value* binopNode::codegen(){
 }
 
 Value* stringNode::codegen(){
-  notImpl("codegen");
-  return nullptr;
+  return builder->CreateGlobalStringPtr(StringRef(val));
 }
 Value* listNode::codegen(){
   notImpl("codegen");
@@ -100,7 +99,19 @@ Value* fnCallNode::codegen(){
 }
 
 Function* fnProtoNode::codegen(){
-  vector<Type*> calltyp (args.size(),Type::getDoubleTy(*ctx));
+  vector<Type*> calltyp;
+  for (string arg: args){
+    if (arg == "str"){
+      calltyp.push_back(Type::getInt8PtrTy(*ctx));
+    }
+    else if (arg == "double"){
+      calltyp.push_back(Type::getDoubleTy(*ctx));
+    }
+    else {
+      error("unknown type " + arg);
+    }
+  }
+  
   FunctionType* ft = 
       FunctionType::get(
                   Type::getDoubleTy(*ctx),calltyp,false);
@@ -270,6 +281,40 @@ Value* varSetNode::codegen(){
   builder->CreateStore(v,var);
   return v;
 }
+
+
+Value* TypVarSetNode::codegen(){
+  Value* v = val->codegen();
+  if (!v){ return nullptr; }
+
+  Value* var = nmvals[nm];
+  if (!var){
+    Function *fn = builder->GetInsertBlock()->getParent();
+    Value* init = val->codegen();
+    if (!init){ return nullptr; }
+    IRBuilder<> tmp_builder(&fn->getEntryBlock(),
+            fn->getEntryBlock().begin());
+    AllocaInst* aloc;
+    if (typ == "double"){
+      aloc = tmp_builder.CreateAlloca(
+          Type::getDoubleTy(*ctx),nullptr,nm.c_str());
+    }
+    else if ( typ == "str"){
+      aloc = tmp_builder.CreateAlloca(
+          Type::getInt8PtrTy(*ctx),nullptr,nm.c_str());
+    }
+    else {
+      error("unknown type " + typ);
+    }
+    builder->CreateStore(init,aloc);
+    nmvals[nm] = aloc;
+    return ConstantFP::get(*ctx,APFloat(0.0));
+  }
+
+  builder->CreateStore(v,var);
+  return v;
+}
+
 
 
 #endif
