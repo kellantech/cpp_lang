@@ -16,7 +16,14 @@ public:
       cur = tkn[ind];
     }
   }
-  
+  token look(){
+    if (ind >= tkn.size()){
+      return token(tt("NONE"),cur.p);
+    }
+    else {
+      return tkn[ind+1];
+    }
+  }
   astNode* value(){
     astNode* ret;
     string nm;
@@ -107,8 +114,10 @@ public:
     return binOp(op,"expr",4);
   }
   astNode* logical_expr(){
-    if (cur.type == tt("KWD") && cur.val == "var"){
-      next();
+    if ((cur.type == tt("KWD") && cur.val == "var") || (cur.type == tt("ID") && (look().type == tt("EQL") || look().type == tt("CLN")))){
+      if (cur.val == "var"){
+        next();
+      }
       string nm;
       if (cur.type == tt("ID")){
         nm = cur.val;
@@ -117,12 +126,28 @@ public:
         error("expected identifier",cur.p);
       }
       next();
+      string typ = "";
+      if (cur.type == tt("CLN")){
+        next();
+        if (cur.val == "str" || cur.val == "double"){
+          typ = cur.val;
+        }
+        else {
+          error("unknown type " + cur.val, cur.p);
+        }
+        next();
+      }
       if (cur.type != tt("EQL")){
         error("expected '='",cur.p);
       }
       next();
       astNode* a = logical_expr();
-      return new varSetNode(nm,a);
+      if (typ != ""){
+        return new TypVarSetNode(nm,a,typ);
+      }
+      else {
+       return new varSetNode(nm,a);
+      }
     }
     if (cur.type == tt("KWD") && cur.val == "if"){
       next();
