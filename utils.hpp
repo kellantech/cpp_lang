@@ -1,6 +1,8 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+
+
 class pos{
   public:
   int ln;
@@ -63,7 +65,7 @@ int tt(string s){
     {"RCB",13},{"NE",14},{"GT",15},
     {"LT",16},{"AND",17},{"OR",18},
     {"CMA",19},{"DOT",20},{"STR",21},
-    {"LB",22},{"RB",23},
+    {"LB",22},{"RB",23},{"CLN",24},
     {"NONE",100},{"NUL",101}
   };
   
