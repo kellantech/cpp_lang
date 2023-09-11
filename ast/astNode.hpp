@@ -455,4 +455,33 @@ class fnProtoNode : public astNode{
 Function* codegen() override ;
 };
 
+
+class TypVarSetNode : public astNode{
+  public:
+  string nm;
+  astNode* val;
+  string typ;
+  
+  TypVarSetNode(string n ,astNode* vl,string t){
+     nm = n;
+     val = move(vl);
+     typ = t;
+     if (t != "str" && t != "double"){
+       error("unknown type " + t);
+     }
+   }
+  lType* exec(symbolTable st) override{
+      lType* l = val->exec(st);
+      st.set(nm,move(l));
+      return new lNone();
+    }
+    void print() override{
+      cout << "[ " << nm << " = ";
+      val->print();
+      cout << " : " << typ <<" ]";
+    }
+  Value* codegen() override;
+};
+
+
 #endif
