@@ -97,6 +97,10 @@ public:
         tks.push_back(token(tt("DOT"),pos(ln)));
         next();
       }
+      else if (cur == ':'){
+        tks.push_back(token(tt("CLN"),pos(ln)));
+        next();
+      }
       else if (cur == '='){
         next();
         if(cur == '='){
