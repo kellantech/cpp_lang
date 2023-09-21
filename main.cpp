@@ -137,7 +137,7 @@ int main(int argc ,char** argv) {
   parser p (r);
   while(1){
   astNode* exp = p.logical_expr();
-  if (INFO){ exp->print(); }
+  if (INFO){ exp->print(); cout << endl; }
   if (!INTERP) { exp->codegen(); }
   if (INTERP) { exp->exec(gst); }
   if(p.cur.type == tt("NONE")){
@@ -158,7 +158,7 @@ int main(int argc ,char** argv) {
       int fd = mkstemp(ff);
       genObj(ff);
       cout << "%" << endl;
-      system(("clang++ libio.so "+ string(ff)+" -o " + FILE +" -Wl,-rpath,`pwd` ").c_str());
+      system(("clang++ libio.so "+ string(ff)+" -o " + FILE +" -Wl,-rpath,`pwd`").c_str());
     }
   }
   
