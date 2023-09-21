@@ -5,6 +5,10 @@ static unique_ptr<LLVMContext> ctx;
 static unique_ptr<IRBuilder<>> builder;
 static unique_ptr<Module> mod;
 static map<string,AllocaInst*> nmvals;
+static map<string,string> nmtyps;
+static map<string,vector<string>> fntyps;
+
+
 #include "codegen.hpp"
 
 
@@ -12,8 +16,6 @@ void initModule(){
   ctx = make_unique<LLVMContext>();
   mod = make_unique<Module>("module",*ctx);
   builder = make_unique<IRBuilder<>>(*ctx);
-
-
 }
 
 
