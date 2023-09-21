@@ -92,6 +92,18 @@ public:
         goto check;
       }
     }
+    if (cur.type == tt("LB")){
+      next();
+      astNode* i = logical_expr();
+      next();
+      astNode* ret_ = ret;
+      ret = new subsNode(ret,i);
+      if (cur.type == tt("EQL")){
+        next();
+        astNode* r = logical_expr();
+        return new subsSetNode(ret_,i,r);
+      }
+    }
     else if (cur.type == tt("LP")){
         next();
         vector<astNode*> arg;
