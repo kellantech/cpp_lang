@@ -483,5 +483,36 @@ class TypVarSetNode : public astNode{
   Value* codegen() override;
 };
 
+class subsNode : public astNode{
+  public:
+  astNode* lh;
+  astNode* ind;
+  subsNode(astNode* l, astNode* i){
+    lh = move(l);
+    ind = move(i);
+  }
+  lType* exec(symbolTable st){
+    notImpl("exec");
+  }
+  Value* codegen();
+};
+
+class subsSetNode : public astNode{
+  public:
+  astNode* lh;
+  astNode* ind;
+  astNode* rh;
+  subsSetNode(astNode* l, astNode* i,astNode* r){
+    lh = move(l);
+    ind = move(i);
+    rh = move(r);
+  }
+  lType* exec(symbolTable st){
+    notImpl("exec");
+  }
+  Value* codegen();
+};
+
+
 
 #endif
