@@ -1,5 +1,7 @@
 #ifndef _CODEGEN_H
 #define _CODEGEN_H
+#define _CreateUIToFP builder->CreateUIToFP(LH,Type::getDoubleTy(*ctx),"convtmp");
+
 
 AllocaInst* addAllocaToEntry(Function* fn,string name){
   IRBuilder<> tmp_builder(&fn->getEntryBlock(),
@@ -40,9 +42,18 @@ Value* binopNode::codegen(){
   }
   else if (op == tt("LT")){
     LH = builder->CreateFCmpULT(LH,RH,"cmptmp");
-    return builder->CreateUIToFP(
-      LH,Type::getDoubleTy(*ctx),"convtmp");
+    return _CreateUIToFP ;
   }
+  else if (op == tt("GT")){
+    LH = builder->CreateFCmpUGT(LH,RH,"cmptmp");
+    return _CreateUIToFP ;
+  }
+  else if (op == tt("EQ")){
+    LH = builder->CreateFCmpUEQ(LH,RH,"cmptmp");
+    return _CreateUIToFP ;
+  }
+  
+    
   else {
     error("BAD BINOP");
     return nullptr;
@@ -50,8 +61,37 @@ Value* binopNode::codegen(){
 }
 
 Value* stringNode::codegen(){
-  return builder->CreateGlobalStringPtr(StringRef(val));
+  AllocaInst* aloc = builder->CreateAlloca(ArrayType::get(Type::getInt8Ty(*ctx),val.length()+1),nullptr,"__str_tmp");
+  //Value* s = builder->CreateLoad(aloc->getAllocatedType(),aloc,"__str_tmp");
+  Value* cs = builder->CreateBitCast(aloc,Type::getInt8PtrTy(*ctx));
+  mod->print(errs(),nullptr);
+  cout << "$" << endl;
+  //Value* str =  builder->CreateGlobalStringPtr(StringRef(val));
+  int ind=0;
+  for (char v:(val + "\0")){
+    /*  Value* indIR = ind->codegen();
+  
+      Value* cast = builder->CreateFPToSI(indIR,Type::getInt8Ty(*ctx),"cast");
+  
+      Value* ptr = lh->codegen();
+     Value* inds[1] = {cast};
+     Value* gep = builder->CreateGEP(Type::getInt8Ty(*ctx),ptr,ArrayRef<Value*>(inds,1),"subs");
+      Value* rh_ir = rh->codegen();
+
+      Value* cast2 = builder->CreateFPToSI(rh_ir,Type::getInt8Ty(*ctx),"cast");
+     builder->CreateStore(cast2,gep);
+      return  ConstantFP::get(*ctx,APFloat(0.0));
+*/
+    Value* i = ConstantInt::get(Type::getInt8Ty(*ctx),ind);
+    Value* r = ConstantInt::get(Type::getInt8Ty(*ctx),v);
+    Value* inds[1] = {i};
+    Value* gep = builder->CreateGEP(Type::getInt8Ty(*ctx),cs,ArrayRef<Value*>(inds,1),"subs");
+    builder->CreateStore(r,gep);
+    ind++;
+  } 
+  return cs;
 }
+
 Value* listNode::codegen(){
   notImpl("codegen");
   return nullptr;
@@ -73,15 +113,30 @@ Value* blockNode::codegen(){
 }
 
 Value* fnCallNode::codegen(){
+  
   Function* fn = mod->getFunction(nm);
   if (fn){
     if(fn->arg_size() == args.size()){
       vector<Value*> argv;
+      int ind = 0;
       for( astNode* nd : args ){
-        argv.push_back(move(nd->codegen()));
+        Value* ac = move(nd->codegen());
+        Type* tp = ac->getType();
+        if (tp == Type::getDoubleTy(*ctx)){
+          if( fntyps[nm][ind] != "double" ){
+            error("type mismatch");
+          }
+        }
+        if (tp == Type::getInt8PtrTy(*ctx)){
+          if( fntyps[nm][ind] != "str" ){
+            error("type mismatch");
+          }
+        }
+        argv.push_back(move(ac));
         if (!argv.back()){
           return nullptr;
         }
+        ind++;
       }
       return builder->CreateCall(fn,argv,"fncall");
     }
@@ -98,19 +153,29 @@ Value* fnCallNode::codegen(){
   return nullptr;
 }
 
+
 Function* fnProtoNode::codegen(){
   vector<Type*> calltyp;
+  vector<string> sts;
   for (string arg: args){
     if (arg == "str"){
       calltyp.push_back(Type::getInt8PtrTy(*ctx));
+      sts.push_back("str");
     }
     else if (arg == "double"){
       calltyp.push_back(Type::getDoubleTy(*ctx));
+      sts.push_back("double");
+    }
+    else if (arg == "i8"){
+      calltyp.push_back(Type::getInt8Ty(*ctx));
+      sts.push_back("i8");
     }
     else {
       error("unknown type " + arg);
+      return nullptr;
     }
   }
+  fntyps[nm] = sts;
   
   FunctionType* ft = 
       FunctionType::get(
@@ -154,8 +219,22 @@ Value* fnDefNode::codegen(){
 }
 
 Value* propGetNode::codegen(){
-  notImpl("codegen");
-  return nullptr;
+  Value* LH = nd->codegen();
+  string t;
+  if (LH->getType() == Type::getInt8PtrTy(*ctx)){
+    t = "STR";
+  }
+  else if (LH->getType() == Type::getDoubleTy(*ctx)){
+    t = "DBL";
+  }
+  else {
+    error("unknown type");
+    return nullptr;
+  }
+  astNode* f = new fnCallNode(nullptr,vector<astNode*>{new stringNode(t)},"PROPGET"+t);
+
+  
+  return f->codegen();
 }
 
 Value* ifNode::codegen(){
@@ -163,6 +242,7 @@ Value* ifNode::codegen(){
   if (!cond){
     return nullptr;
   }
+  
   cond = builder->CreateFCmpONE(cond,
     ConstantFP::get(*ctx,APFloat(0.0)),"ifcond");
 
@@ -290,8 +370,6 @@ Value* TypVarSetNode::codegen(){
   Value* var = nmvals[nm];
   if (!var){
     Function *fn = builder->GetInsertBlock()->getParent();
-    Value* init = val->codegen();
-    if (!init){ return nullptr; }
     IRBuilder<> tmp_builder(&fn->getEntryBlock(),
             fn->getEntryBlock().begin());
     AllocaInst* aloc;
@@ -303,16 +381,48 @@ Value* TypVarSetNode::codegen(){
       aloc = tmp_builder.CreateAlloca(
           Type::getInt8PtrTy(*ctx),nullptr,nm.c_str());
     }
+      
     else {
       error("unknown type " + typ);
     }
-    builder->CreateStore(init,aloc);
+    nmtyps[nm] = typ;
+    builder->CreateStore(v,aloc);
     nmvals[nm] = aloc;
     return ConstantFP::get(*ctx,APFloat(0.0));
   }
 
   builder->CreateStore(v,var);
   return v;
+}
+
+Value* subsNode::codegen(){
+  Value* indIR = ind->codegen();
+  
+  Value* cast = builder->CreateFPToSI(indIR,Type::getInt8Ty(*ctx),"cast");
+  
+  Value* ptr = lh->codegen();
+  Value* inds[1] = {cast};
+  Value* gep = builder->CreateGEP(Type::getInt8Ty(*ctx),ptr,ArrayRef<Value*>(inds,1),"subs");
+
+  return builder->CreateLoad(Type::getInt8Ty(*ctx),gep,"ptr");
+}
+
+Value* subsSetNode::codegen(){
+  Value* indIR = ind->codegen();
+  
+  Value* cast = builder->CreateFPToSI(indIR,Type::getInt8Ty(*ctx),"cast");
+  
+  Value* ptr = lh->codegen();
+  Value* inds[1] = {cast};
+  Value* gep = builder->CreateGEP(Type::getInt8Ty(*ctx),ptr,ArrayRef<Value*>(inds,1),"subs");
+  Value* rh_ir = rh->codegen();
+
+  
+  Value* cast2 = builder->CreateFPToSI(rh_ir,Type::getInt8Ty(*ctx),"cast");
+
+  builder->CreateStore(cast2,gep);
+  return  ConstantFP::get(*ctx,APFloat(0.0));
+
 }
 
 
