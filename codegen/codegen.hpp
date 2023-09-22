@@ -62,26 +62,11 @@ Value* binopNode::codegen(){
 
 Value* stringNode::codegen(){
   AllocaInst* aloc = builder->CreateAlloca(ArrayType::get(Type::getInt8Ty(*ctx),val.length()+1),nullptr,"__str_tmp");
-  //Value* s = builder->CreateLoad(aloc->getAllocatedType(),aloc,"__str_tmp");
   Value* cs = builder->CreateBitCast(aloc,Type::getInt8PtrTy(*ctx));
   mod->print(errs(),nullptr);
   cout << "$" << endl;
-  //Value* str =  builder->CreateGlobalStringPtr(StringRef(val));
   int ind=0;
   for (char v:(val + "\0")){
-    /*  Value* indIR = ind->codegen();
-  
-      Value* cast = builder->CreateFPToSI(indIR,Type::getInt8Ty(*ctx),"cast");
-  
-      Value* ptr = lh->codegen();
-     Value* inds[1] = {cast};
-     Value* gep = builder->CreateGEP(Type::getInt8Ty(*ctx),ptr,ArrayRef<Value*>(inds,1),"subs");
-      Value* rh_ir = rh->codegen();
-
-      Value* cast2 = builder->CreateFPToSI(rh_ir,Type::getInt8Ty(*ctx),"cast");
-     builder->CreateStore(cast2,gep);
-      return  ConstantFP::get(*ctx,APFloat(0.0));
-*/
     Value* i = ConstantInt::get(Type::getInt8Ty(*ctx),ind);
     Value* r = ConstantInt::get(Type::getInt8Ty(*ctx),v);
     Value* inds[1] = {i};
@@ -192,7 +177,7 @@ Function* fnProtoNode::codegen(){
 }
 
 Value* fnDefNode::codegen(){
-  fnProtoNode* proto = new fnProtoNode(nm,args);
+  fnProtoNode* proto = new fnProtoNode(nm,vector<string>(args.size(),"double"));
   Function* fn = mod->getFunction(proto->nm);
   if (!fn){ fn = proto->codegen(); }
   if (!fn){ return nullptr; }
@@ -203,15 +188,17 @@ Value* fnDefNode::codegen(){
   BasicBlock* bb = BasicBlock::Create(*ctx,"entry",fn);
   builder->SetInsertPoint(bb);
   nmvals.clear();
+  int ind = 0;
   for (auto& Arg: fn->args()){
-    AllocaInst* aloc = addAllocaToEntry(fn,string(Arg.getName()));
+    AllocaInst* aloc = addAllocaToEntry(fn,args[ind]);
     builder->CreateStore(&Arg,aloc);
-    nmvals[string(Arg.getName())] = aloc;
+    nmvals[args[ind++]] = aloc;
   }
   Value* ret = blk->codegen();
   if(ret){
     builder->CreateRet(ret);
     verifyFunction(*fn);
+    pm->run(*fn);
     return fn;
   }
   fn->eraseFromParent();
@@ -336,8 +323,11 @@ Value* forNode::codegen(){
 }
 
 Value* unOpNode::codegen(){
-  notImpl("codegen");
-  return nullptr;
+  Value* lhs = lh->codegen();
+  if (op == tt("SUB")){
+     return builder->CreateFMul(lhs,ConstantFP::get(*ctx,APFloat(-1.0)),"multmp");
+  }
+  return lhs;
 }
 
 
@@ -408,19 +398,18 @@ Value* subsNode::codegen(){
 }
 
 Value* subsSetNode::codegen(){
-  Value* indIR = ind->codegen();
   
-  Value* cast = builder->CreateFPToSI(indIR,Type::getInt8Ty(*ctx),"cast");
+  Value* indIR = ind->codegen();
+  Value* indcast = builder->CreateFPToSI(indIR,Type::getInt8Ty(*ctx),"cast");
   
   Value* ptr = lh->codegen();
-  Value* inds[1] = {cast};
+  Value* inds[1] = {indcast};
   Value* gep = builder->CreateGEP(Type::getInt8Ty(*ctx),ptr,ArrayRef<Value*>(inds,1),"subs");
-  Value* rh_ir = rh->codegen();
-
   
-  Value* cast2 = builder->CreateFPToSI(rh_ir,Type::getInt8Ty(*ctx),"cast");
+  Value* rh_ir = rh->codegen();
+  Value* rh_cast = builder->CreateFPToSI(rh_ir,Type::getInt8Ty(*ctx),"cast");
 
-  builder->CreateStore(cast2,gep);
+  builder->CreateStore(rh_cast,gep);
   return  ConstantFP::get(*ctx,APFloat(0.0));
 
 }
