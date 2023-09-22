@@ -8,13 +8,25 @@ static map<string,AllocaInst*> nmvals;
 static map<string,string> nmtyps;
 static map<string,vector<string>> fntyps;
 
+static unique_ptr<legacy::FunctionPassManager> pm;
 
 #include "codegen.hpp"
 
 
 void initModule(){
+
   ctx = make_unique<LLVMContext>();
   mod = make_unique<Module>("module",*ctx);
+
+  pm = make_unique<legacy::FunctionPassManager>(mod.get());
+  pm->add(createInstructionCombiningPass());
+  pm->add(createReassociatePass());
+  pm->add(createGVNPass());
+  pm->add(createCFGSimplificationPass());
+  pm->add(createPromoteMemoryToRegisterPass());
+
+  pm->doInitialization();
+
   builder = make_unique<IRBuilder<>>(*ctx);
 }
 
