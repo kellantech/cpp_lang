@@ -198,7 +198,7 @@ Value* fnDefNode::codegen(){
   if(ret){
     builder->CreateRet(ret);
     verifyFunction(*fn);
-    pm->run(*fn);
+    if (OPT){ pm->run(*fn); }
     return fn;
   }
   fn->eraseFromParent();
