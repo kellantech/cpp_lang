@@ -40,6 +40,9 @@
 
 using namespace std;
 using namespace llvm;
+
+bool OPT = false;
+
 #include "utils.hpp"
 
 class lType;
@@ -98,6 +101,9 @@ int main(int argc ,char** argv) {
     }
     else if (arg == "-l"){
       LINK = true;
+    }
+    else if (arg == "-O"){
+      OPT = true;
     }
     else{
       FILE = arg;
