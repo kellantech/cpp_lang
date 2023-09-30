@@ -466,7 +466,7 @@ class TypVarSetNode : public astNode{
      nm = n;
      val = move(vl);
      typ = t;
-     if (t != "str" && t != "double"){
+     if (t != "str" && t != "double" && t != "ARR-double"){
        error("unknown type " + t);
      }
    }
