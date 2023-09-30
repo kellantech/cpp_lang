@@ -4,7 +4,7 @@
 
 tuple<string,vector<string>> imp(string n){
   string n_c = n;
-  regex r{"import \"([a-zA-z0-9_]*)\""};
+  regex r{"import \"([a-zA-z0-9_\?./]*)\""};
   smatch m;
   string fc;
   vector<string> bn;
