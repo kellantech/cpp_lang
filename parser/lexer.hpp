@@ -24,16 +24,34 @@ public:
     while(1){
       char c = cur;
       if (cur == '+'){
-        tks.push_back(token(tt("ADD"),pos(ln)));
         next();
+        if (cur == '='){
+          tks.push_back(token(tt("AEQ"),pos(ln)));
+          next();
+        }
+        else{
+          tks.push_back(token(tt("ADD"),pos(ln)));
+        }
       }
       else if (cur == '-'){
-        tks.push_back(token(tt("SUB"),pos(ln)));
         next();
+        if (cur == '='){
+          tks.push_back(token(tt("SEQ"),pos(ln)));
+          next();
+        }
+        else{
+          tks.push_back(token(tt("SUB"),pos(ln)));
+        }
       }
       else if (cur == '*'){
-        tks.push_back(token(tt("MUL"),pos(ln)));
         next();
+        if (cur == '='){
+          tks.push_back(token(tt("MEQ"),pos(ln)));
+          next();
+        }
+        else{
+          tks.push_back(token(tt("MUL"),pos(ln)));
+        }
       }
       else if (cur == '/'){
         tks.push_back(token(tt("DIV"),pos(ln)));
