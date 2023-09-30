@@ -143,11 +143,17 @@ public:
         next();
         if (cur.val == "str" || cur.val == "double"){
           typ = cur.val;
+          next();
+          if (cur.type == tt("LB") && look().type == tt("RB")){
+            typ = "ARR-"+typ;
+            next();
+            next();
+          }
         }
         else {
           error("unknown type " + cur.val, cur.p);
         }
-        next();
+        
       }
       if (cur.type != tt("EQL")){
         error("expected '='",cur.p);
@@ -274,6 +280,26 @@ public:
       }
       next();
       return new fnProtoNode(n,arg);
+    }
+    else if (cur.type == tt("ID") && (look().type == tt("AEQ") || look().type == tt("SEQ") || look().type == tt("MEQ"))){
+      string idn = cur.val;
+      next();
+      token vl = cur;
+      next();
+      astNode* rhs = logical_expr();
+      if (vl.type == tt("AEQ")){
+        return new varSetNode(idn, new binopNode(new varGetNode(idn),rhs,tt("ADD")));
+      }
+      if (vl.type == tt("SEQ")){
+        return new varSetNode(idn, new binopNode(new varGetNode(idn),rhs,tt("SUB")));
+      }
+      if (vl.type == tt("MEQ")){
+        return new varSetNode(idn, new binopNode(new varGetNode(idn),rhs,tt("MUL")));
+      }
+      else {
+        error("?");
+      }
+      
     }
     int op[] = {tt("AND"),tt("OR")};
     astNode* bnop = binOp(op,"cmp",2);
