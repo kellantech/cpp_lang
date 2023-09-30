@@ -2,12 +2,30 @@
 #define _CODEGEN_H
 #define _CreateUIToFP builder->CreateUIToFP(LH,Type::getDoubleTy(*ctx),"convtmp");
 
+#define DOUBLETY (Type::getDoubleTy(*ctx))
+#define I8TY (Type::getInt8Ty(*ctx))
+
 
 AllocaInst* addAllocaToEntry(Function* fn,string name){
   IRBuilder<> tmp_builder(&fn->getEntryBlock(),
             fn->getEntryBlock().begin());
   return tmp_builder.CreateAlloca(
     Type::getDoubleTy(*ctx),nullptr,name.c_str());
+}
+
+Value* cast(Value* v, Type* t){
+  Type* vt = v->getType();
+  if (vt == DOUBLETY && t == I8TY){
+    return builder->CreateFPToSI(v,t,"fp2si");
+  }
+  else if (vt == I8TY && t == DOUBLETY){
+    return builder->CreateSIToFP(v,t,"si2fp");
+
+  }
+  else {
+    error("cant cast types");
+    return nullptr;
+  }
 }
 
 Value* intNode::codegen(){
@@ -78,8 +96,19 @@ Value* stringNode::codegen(){
 }
 
 Value* listNode::codegen(){
-  notImpl("codegen");
-  return nullptr;
+  AllocaInst* aloc = builder->CreateAlloca(ArrayType::get(Type::getDoubleTy(*ctx),lv.size()),nullptr,"__arry_tmp");
+  Value* cs = builder->CreateBitCast(aloc,Type::getDoublePtrTy(*ctx));
+  cout << "$" << endl;
+  int ind=0;
+  for (astNode* vl:lv){
+    Value* v = vl->codegen();
+    Value* i = ConstantInt::get(Type::getInt32Ty(*ctx),ind);
+    Value* inds[1] = {i};
+    Value* gep = builder->CreateGEP(Type::getDoubleTy(*ctx),cs,ArrayRef<Value*>(inds,1),"subs");
+    builder->CreateStore(v,gep);
+    ind++;
+  } 
+  return cs;
 }
 Value* retNode::codegen(){
   notImpl("codegen");
@@ -339,11 +368,9 @@ Value* varSetNode::codegen(){
   if (!var){
     Function *fn = builder->GetInsertBlock()->getParent();
 
-    Value* init = val->codegen();
-    if (!init){ return nullptr; }
     
     AllocaInst* aloc = addAllocaToEntry(fn,nm);
-    builder->CreateStore(init,aloc);
+    builder->CreateStore(v,aloc);
     nmvals[nm] = aloc;
     return ConstantFP::get(*ctx,APFloat(0.0));
   }
@@ -371,6 +398,10 @@ Value* TypVarSetNode::codegen(){
       aloc = tmp_builder.CreateAlloca(
           Type::getInt8PtrTy(*ctx),nullptr,nm.c_str());
     }
+    else if ( typ == "ARR-double"){
+      aloc = tmp_builder.CreateAlloca(
+          Type::getDoublePtrTy(*ctx),nullptr,nm.c_str());
+    }
       
     else {
       error("unknown type " + typ);
@@ -386,30 +417,36 @@ Value* TypVarSetNode::codegen(){
 }
 
 Value* subsNode::codegen(){
+  Value* ptr = lh->codegen();
+  Type* ty = ptr->getType()->getPointerElementType();
+
   Value* indIR = ind->codegen();
   
-  Value* cast = builder->CreateFPToSI(indIR,Type::getInt8Ty(*ctx),"cast");
+  Value* cast = builder->CreateFPToSI(indIR,Type::getInt32Ty(*ctx),"cast");
   
-  Value* ptr = lh->codegen();
+  
   Value* inds[1] = {cast};
-  Value* gep = builder->CreateGEP(Type::getInt8Ty(*ctx),ptr,ArrayRef<Value*>(inds,1),"subs");
+  Value* gep = builder->CreateGEP(ty,ptr,ArrayRef<Value*>(inds,1),"subs");
 
-  return builder->CreateLoad(Type::getInt8Ty(*ctx),gep,"ptr");
+  Value* ld =  builder->CreateLoad(ty,gep,"ptr");
+  return ld;
 }
 
 Value* subsSetNode::codegen(){
+  Value* ptr = lh->codegen();
+  Type* ty = ptr->getType()->getPointerElementType();
   
   Value* indIR = ind->codegen();
-  Value* indcast = builder->CreateFPToSI(indIR,Type::getInt8Ty(*ctx),"cast");
+  Value* indcast = builder->CreateFPToSI(indIR,Type::getInt32Ty(*ctx),"cast");
   
-  Value* ptr = lh->codegen();
   Value* inds[1] = {indcast};
-  Value* gep = builder->CreateGEP(Type::getInt8Ty(*ctx),ptr,ArrayRef<Value*>(inds,1),"subs");
+  Value* gep = builder->CreateGEP(ty,ptr,ArrayRef<Value*>(inds,1),"subs");
   
   Value* rh_ir = rh->codegen();
-  Value* rh_cast = builder->CreateFPToSI(rh_ir,Type::getInt8Ty(*ctx),"cast");
-
-  builder->CreateStore(rh_cast,gep);
+  if (ty != rh_ir->getType()){
+    rh_ir = cast(rh_ir,ty);
+  }
+  builder->CreateStore(rh_ir,gep);
   return  ConstantFP::get(*ctx,APFloat(0.0));
 
 }
