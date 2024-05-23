@@ -7,6 +7,8 @@ static unique_ptr<Module> mod;
 static map<string,AllocaInst*> nmvals;
 static map<string,string> nmtyps;
 static map<string,vector<string>> fntyps;
+static map<string,vector<string>> styps;
+static map<string,Type*> sts;
 
 static unique_ptr<legacy::FunctionPassManager> pm;
 

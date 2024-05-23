@@ -5,7 +5,7 @@ public:
   int ind = -1;
   int ln = 1;
   char cur = (char)2;
-  vector<string> KWDS {"var","if","else","elif","while","for","fn","ret","proto"};
+  vector<string> KWDS {"var","if","else","elif","while","for","fn","ret","proto","struct"};
   lexer(string t){
     txt = t;
     next();
@@ -117,6 +117,10 @@ public:
       }
       else if (cur == ':'){
         tks.push_back(token(tt("CLN"),pos(ln)));
+        next();
+      }
+      else if (cur == '@'){
+        tks.push_back(token(tt("AT"),pos(ln)));
         next();
       }
       else if (cur == '='){

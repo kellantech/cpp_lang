@@ -1,0 +1,33 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <iostream>
+extern "C" {
+  double printd(double d){
+    printf("%f\n",d);
+    return 0.0;
+  }
+  double printchr(double d){
+    printf("%c\n",(char)d);
+    return 0.0;
+  }
+  double prints(char* s){
+    printf("%s\n",s);
+    return 0.0;
+  }
+  double printi(int8_t s){
+    printf("%d\n",s);
+    return 0.0;
+  }
+  double getd(){
+    double r;
+    std::cin >> r;
+    return r;
+  }
+  char* gets(){
+    char* r = new char[256];
+    std::cin >> r;
+    return r;
+  }
+  
+  
+}
