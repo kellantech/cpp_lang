@@ -48,10 +48,23 @@ public:
     else if (cur.type == tt("ID")){
       string n = cur.val;
       next();
+      if (cur.type == tt("AT")){
+        next();
+        cout << cur.val << "**" << endl;
+        int i = stoi(cur.val);
+        next();
+        if (cur.type == tt("EQL")){
+          next();
+          astNode* rh = logical_expr();
+          return new structSetNode(n,i,rh);
+        }
+        return new structGetNode(n,i);
+      }
       nm = n;
       
       ret = new varGetNode(n); 
     }
+
     else if (cur.type == tt("LP")){
       next();
       ret = logical_expr();
@@ -76,7 +89,7 @@ public:
 
     else{
       if (cur.type == tt("NONE")){
-        error("unexpected EOF",cur.p-1);
+        error("uncexpected EOF",cur.p-1);
       }
       
       error("expected int",cur.p-1);
@@ -92,7 +105,7 @@ public:
         goto check;
       }
     }
-    if (cur.type == tt("LB")){
+    else if (cur.type == tt("LB")){
       next();
       astNode* i = logical_expr();
       next();
@@ -105,16 +118,18 @@ public:
       }
     }
     else if (cur.type == tt("LP")){
-        next();
-        vector<astNode*> arg;
-        while (cur.type != tt("RP")){
-          arg.push_back(logical_expr());
-          if (cur.type == tt("CMA")){ next(); }
-        }
-        next();
-        ret = new fnCallNode(ret,arg,nm);
-        goto check;
+      next();
+      vector<astNode*> arg;
+      while (cur.type != tt("RP")){
+        arg.push_back(logical_expr());
+        if (cur.type == tt("CMA")){ next(); }
       }
+      next();
+      ret = new fnCallNode(ret,arg,nm);
+      goto check;
+    }
+    
+    
     return move(ret);
   }
   astNode* term (){
@@ -141,7 +156,16 @@ public:
       string typ = "";
       if (cur.type == tt("CLN")){
         next();
-        if (cur.val == "str" || cur.val == "double"){
+        if (cur.type == tt("KWD") && cur.val == "struct"){
+          next();
+          if (cur.type != tt("ID")){
+            error("expected identifier");
+          }
+          typ = "STRUCT" + cur.val;
+          next();
+          return new TypVarSetNode(nm,nullptr,typ);
+        }
+        else if (isty(cur.val)){
           typ = cur.val;
           next();
           if (cur.type == tt("LB") && look().type == tt("RB")){
@@ -247,8 +271,14 @@ public:
       if (cur.type == tt("LP")){
         next();
         while (cur.type != tt("RP")){
-          arg.push_back(cur.val);
+          string ca = cur.val;
           next();
+          if (cur.type == tt("CLN")){
+            next();
+            ca += "::" + cur.val;
+            next();
+          }
+          arg.push_back(cur.val);
           if (cur.type == tt("CMA")) { next(); }
         }
         next();
@@ -301,10 +331,32 @@ public:
       }
       
     }
+    if (cur.type == tt("KWD") && cur.val == "struct"){
+      cout << "&&" << endl;
+        next();
+      if (cur.type != tt("ID")){
+        error("expected identifier");
+        return nullptr;
+      }
+      string n = cur.val;
+      next();
+      if (cur.type != tt("LCB")){
+        error("expected '{'");
+        return nullptr;
+      }
+      next();
+      vector<string> tys;
+      while (cur.type != tt("RCB")){
+        tys.push_back(cur.val);
+        next();
+        if (cur.type == tt("CMA")){ next(); }
+      } 
+      next();
+      return new structNode(n,tys);
+    }
     int op[] = {tt("AND"),tt("OR")};
     astNode* bnop = binOp(op,"cmp",2);
     return bnop;
-    ///return new fnDefNode("__anon_expr",vector<string>{},move(bnop));
   }
   astNode* expr(){
     int op[] = {tt("ADD"),tt("SUB")};
