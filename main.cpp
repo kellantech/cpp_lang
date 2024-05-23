@@ -160,14 +160,14 @@ int main(int argc ,char** argv) {
     InitializeAllTargetMCs();
     InitializeAllAsmParsers();
     InitializeAllAsmPrinters();
-    
+
+
     if (IR) { mod->print(errs(),nullptr); }
     if (!LINK) { genObj(FILE); }
     if (LINK) {
       char ff[] = "/tmp/fileXXXXXX";
       int fd = mkstemp(ff);
       genObj(ff);
-      cout << "%" << endl;
       system(("clang++ libio.so "+ string(ff)+" -o " + FILE +" -Wl,-rpath,`pwd`").c_str());
     }
   }
