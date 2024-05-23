@@ -5,6 +5,42 @@
 #define DOUBLETY (Type::getDoubleTy(*ctx))
 #define I8TY (Type::getInt8Ty(*ctx))
 
+bool isty(string t){
+  cout << t.substr(0,4) << endl;
+  if (t.substr(0,4) == "ARR-"){
+    t = t.substr(5,t.length()-5);
+    cout << t << endl;
+  }
+  if (t == "str" || t == "i8" || t == "double"){
+    return true;
+  }
+  return false;
+}
+
+Type* tyget(string t){
+  if (t == "str"){
+    return Type::getInt8PtrTy(*ctx);
+  }
+  else if (t == "double"){
+    return Type::getDoubleTy(*ctx);
+  }
+  else if (t == "i8"){
+    return Type::getInt8Ty(*ctx);
+  }
+  else if (t == "ARR-double"){
+    return Type::getDoublePtrTy(*ctx);
+  }
+  else if (t == "ARR-i8"){
+    return Type::getInt8PtrTy(*ctx);
+  }
+  else if (t.substr(0,6) == "STRUCT"){
+    return sts[t];
+  }
+  else {
+    error("unknown type " + t);
+    return nullptr;
+  }
+}
 
 AllocaInst* addAllocaToEntry(Function* fn,string name){
   IRBuilder<> tmp_builder(&fn->getEntryBlock(),
@@ -155,12 +191,13 @@ Value* fnCallNode::codegen(){
       return builder->CreateCall(fn,argv,"fncall");
     }
     else {
-      error("bad num of args");
+      error("bad num of args, expected " + to_string(fn->arg_size()) + " got " + to_string(args.size()));
+      
       return nullptr;
     }
   }
   else {
-    error("fn not found");
+    error("fn "+nm+" not found");
     return nullptr;
   }
   notImpl("codegen not complete");
@@ -172,22 +209,8 @@ Function* fnProtoNode::codegen(){
   vector<Type*> calltyp;
   vector<string> sts;
   for (string arg: args){
-    if (arg == "str"){
-      calltyp.push_back(Type::getInt8PtrTy(*ctx));
-      sts.push_back("str");
-    }
-    else if (arg == "double"){
-      calltyp.push_back(Type::getDoubleTy(*ctx));
-      sts.push_back("double");
-    }
-    else if (arg == "i8"){
-      calltyp.push_back(Type::getInt8Ty(*ctx));
-      sts.push_back("i8");
-    }
-    else {
-      error("unknown type " + arg);
-      return nullptr;
-    }
+    calltyp.push_back(tyget(arg));
+    sts.push_back(arg);
   }
   fntyps[nm] = sts;
   
@@ -287,13 +310,14 @@ Value* ifNode::codegen(){
   
   fn->getBasicBlockList().push_back(BBmerge);
   builder->SetInsertPoint(BBmerge);
-  PHINode* phi = builder->CreatePHI(
+  /*PHINode* phi = builder->CreatePHI(
             Type::getDoubleTy(*ctx),2,"mergetmp");
  
   phi->addIncoming(thenIR,BBthen);
-  phi->addIncoming(elseIR,BBelse);
+  phi->addIncoming(elseIR,BBelse);*/
+
   
-  return phi;
+  return ConstantFP::get(*ctx,APFloat(0.0));
 }
 
 
@@ -381,33 +405,29 @@ Value* varSetNode::codegen(){
 
 
 Value* TypVarSetNode::codegen(){
-  Value* v = val->codegen();
-  if (!v){ return nullptr; }
-
+  bool s = true;
+  
+  cout << typ.substr(0,7) << endl;
+  if(typ.substr(0,6) == "STRUCT"){
+    cout << "%@" << endl;
+    s = false;
+  }
+  Value* v;
+  if (s){ v = val->codegen(); }
+  
+  
+  if (!v && s){ return nullptr; }
   Value* var = nmvals[nm];
   if (!var){
     Function *fn = builder->GetInsertBlock()->getParent();
     IRBuilder<> tmp_builder(&fn->getEntryBlock(),
             fn->getEntryBlock().begin());
     AllocaInst* aloc;
-    if (typ == "double"){
-      aloc = tmp_builder.CreateAlloca(
-          Type::getDoubleTy(*ctx),nullptr,nm.c_str());
-    }
-    else if ( typ == "str"){
-      aloc = tmp_builder.CreateAlloca(
-          Type::getInt8PtrTy(*ctx),nullptr,nm.c_str());
-    }
-    else if ( typ == "ARR-double"){
-      aloc = tmp_builder.CreateAlloca(
-          Type::getDoublePtrTy(*ctx),nullptr,nm.c_str());
-    }
-      
-    else {
-      error("unknown type " + typ);
-    }
+    aloc = tmp_builder.CreateAlloca(
+        tyget(typ),nullptr,nm.c_str());
+    
     nmtyps[nm] = typ;
-    builder->CreateStore(v,aloc);
+    if (s) { builder->CreateStore(v,aloc); }
     nmvals[nm] = aloc;
     return ConstantFP::get(*ctx,APFloat(0.0));
   }
@@ -418,31 +438,39 @@ Value* TypVarSetNode::codegen(){
 
 Value* subsNode::codegen(){
   Value* ptr = lh->codegen();
-  Type* ty = ptr->getType()->getPointerElementType();
-
+  ptr->print(errs());
+  
+  Type* ty;
+  ty = ptr->getType()->getPointerElementType();
+  
   Value* indIR = ind->codegen();
   
   Value* cast = builder->CreateFPToSI(indIR,Type::getInt32Ty(*ctx),"cast");
   
   
   Value* inds[1] = {cast};
-  Value* gep = builder->CreateGEP(ty,ptr,ArrayRef<Value*>(inds,1),"subs");
+  Value* gep;
+  
 
+    gep = builder->CreateGEP(ty,ptr,ArrayRef<Value*>(inds,1),"subs");
+  
   Value* ld =  builder->CreateLoad(ty,gep,"ptr");
   return ld;
 }
 
 Value* subsSetNode::codegen(){
   Value* ptr = lh->codegen();
-  Type* ty = ptr->getType()->getPointerElementType();
   
   Value* indIR = ind->codegen();
+  Type* ty = ptr->getType()->getPointerElementType();
+  
   Value* indcast = builder->CreateFPToSI(indIR,Type::getInt32Ty(*ctx),"cast");
   
   Value* inds[1] = {indcast};
   Value* gep = builder->CreateGEP(ty,ptr,ArrayRef<Value*>(inds,1),"subs");
   
   Value* rh_ir = rh->codegen();
+  
   if (ty != rh_ir->getType()){
     rh_ir = cast(rh_ir,ty);
   }
@@ -452,5 +480,70 @@ Value* subsSetNode::codegen(){
 }
 
 
+Value* structNode::codegen(){
+  auto* st = StructType::create(*ctx,nm+"_typ");
+  vector<Type*> ts;
+  for (string typ: typs){
+    ts.push_back(tyget(typ));
+  }
+  
+  st->setBody(ts);
+  styps[nm] = typs;
+  sts["STRUCT" + nm] = st;
+  /*Function *fn = builder->GetInsertBlock()->getParent();
+  Type* pt = st;
+
+  
+  IRBuilder<> tmp_builder(&fn->getEntryBlock(),
+            fn->getEntryBlock().begin());
+
+  AllocaInst* aloc =  tmp_builder.CreateAlloca(pt,nullptr,nm.c_str());
+
+  nmvals[nm] = aloc;*/
+  return ConstantFP::get(*ctx,APFloat(0.0));
+}
+
+Value* structGetNode::codegen(){
+  AllocaInst* ptr = nmvals[nm];
+  ptr->print(errs());
+  
+  Type* ty;
+  ty = ptr->getAllocatedType();
+  
+  Value* indIR = ConstantInt::get(Type::getInt32Ty(*ctx),rh);
+  
+  Value* inds[2] = {ConstantInt::get(Type::getInt32Ty(*ctx),0),indIR};
+  Value* gep;
+  cout << endl;
+  ty->print(errs());
+  
+  gep = builder->CreateGEP(ty,ptr,ArrayRef<Value*>(inds,2),"subs");
+
+  
+  Value* ld =  builder->CreateLoad(cast<StructType>(ty)->getTypeAtIndex(rh),gep,"ptr");
+  return ld;
+}
+
+Value* structSetNode::codegen(){
+  AllocaInst* ptr = nmvals[nm];
+  
+  Type* ty = ptr->getAllocatedType();
+  
+  Value* indcast = ConstantInt::get(Type::getInt32Ty(*ctx),ind);
+  
+  Value* inds[2] = {ConstantInt::get(Type::getInt32Ty(*ctx),0),indcast};
+  Value* gep = builder->CreateGEP(ty,ptr,ArrayRef<Value*>(inds,2),"subs");
+  
+  Value* rh_ir = rh->codegen();
+
+  Type* ety = cast<StructType>(ty)->getTypeAtIndex(ind);
+  if ( rh_ir->getType() != ety ){
+    rh_ir = cast(rh_ir,ety);
+  }
+  builder->CreateStore(rh_ir,gep);
+  return  ConstantFP::get(*ctx,APFloat(0.0));
+
+  return nullptr;
+}
 
 #endif
