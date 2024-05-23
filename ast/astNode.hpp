@@ -466,9 +466,6 @@ class TypVarSetNode : public astNode{
      nm = n;
      val = move(vl);
      typ = t;
-     if (t != "str" && t != "double" && t != "ARR-double"){
-       error("unknown type " + t);
-     }
    }
   lType* exec(symbolTable st) override{
       lType* l = val->exec(st);
@@ -477,7 +474,8 @@ class TypVarSetNode : public astNode{
     }
     void print() override{
       cout << "[ " << nm << " = ";
-      val->print();
+      if (val){ val-> print();}
+      else {cout << "? ";}
       cout << " : " << typ <<" ]";
     }
   Value* codegen() override;
@@ -492,7 +490,16 @@ class subsNode : public astNode{
     ind = move(i);
   }
   lType* exec(symbolTable st){
-    notImpl("exec");
+    vector<lType*> vc = lh->exec(st)->lget();
+    int idx = ind->exec(st)->iget();
+    if (idx >= vc.size()){
+      error("list index out of range");
+    }
+    else {
+      return vc[idx];
+    }
+    
+    
   }
   Value* codegen();
 };
@@ -511,6 +518,62 @@ class subsSetNode : public astNode{
     notImpl("exec");
   }
   Value* codegen();
+};
+
+class structNode : public astNode{
+  public:
+  string nm;
+  vector<string> typs;
+  structNode(string n, vector<string> t){
+    nm = n;
+    typs = t;
+  }
+  void print(){
+    cout << "struct " << nm << "{ ";
+    for (string n:typs){
+      cout << n <<", ";
+    }
+    cout << "}";
+    
+  }
+  lType* exec(symbolTable st){
+    error("no exec");
+    return nullptr;
+  }
+  Value* codegen();
+};
+
+class structGetNode : public astNode{
+  public:
+  string nm;
+  int rh;
+  structGetNode(string n,int r){
+    nm = n;
+    rh = r;
+  }
+  lType* exec(symbolTable st){
+    error("no exec");
+    return nullptr;
+  }
+  Value* codegen();
+  
+};
+class structSetNode : public astNode{
+  public:
+  string nm;
+  int ind;
+  astNode* rh;
+  structSetNode(string n,int i, astNode* r){
+    nm = move(n);
+    ind = i;
+    rh = move(r);
+  }
+  lType* exec(symbolTable st){
+    error("no exec");
+    return nullptr;
+  }
+  Value* codegen();
+  
 };
 
 
